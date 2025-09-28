@@ -1,0 +1,20 @@
+import axios from "axios";
+
+const url = "http://127.0.0.1:8000"; // alamat backend Laravel kamu
+
+export const API = axios.create({
+  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8000/api",
+});
+
+// (opsional) interceptor untuk inject token otomatis:
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
+// untuk akses file (misalnya pdf, gambar, dll)
+export const storageURL = `${url}/storage`;
