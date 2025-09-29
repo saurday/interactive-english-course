@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "https://laravel-interactive-english-course-production.up.railway.app/";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "https://laravel-interactive-english-course-production.up.railway.app";
 
 export default function ReviewPage() {
   const { classId, week } = useParams();
