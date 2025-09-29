@@ -17,7 +17,7 @@ import {
   BarChart2
 } from "lucide-react";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
