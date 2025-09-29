@@ -10,7 +10,7 @@ import {
   BookOpenCheck,
 } from "lucide-react";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 const STUDENTS_URL = (cid) => `${BASE_URL}/api/kelas/${cid}/students`;
 const REPORT_URL = (cid, sid) =>
   `${BASE_URL}/api/kelas/${cid}/reports?student_id=${sid}`;
