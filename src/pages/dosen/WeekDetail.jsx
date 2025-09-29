@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 /* ================== Constants & Keys ================== */
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 const resKey = (classId) => `resources:${classId}`;
 const cmtKey = (classId, week) => `comments:${classId}:${week}`;
 
