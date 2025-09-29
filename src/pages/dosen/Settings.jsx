@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 /* ====== Config & helpers ====== */
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 
 const getUserId = () => {
   try {
