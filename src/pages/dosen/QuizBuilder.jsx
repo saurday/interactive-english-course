@@ -11,7 +11,7 @@ import {
   Shuffle,
 } from "lucide-react";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 
 // Toast sederhana
 function Toast({ open, text }) {
