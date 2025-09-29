@@ -2,21 +2,16 @@
 import { API } from "../_api";
 
 /**
- * Login ke backend.
- * Backend (AuthController) mengembalikan:
- * { success, message, access_token, token_type, user }
+ * Login ke backend Laravel
  */
 export const login = async (email, password) => {
   const { data } = await API.post("/login", { email, password });
-  // Kamu simpan ke localStorage di komponen (Login.jsx),
-  // jadi di sini cukup kembalikan data apa adanya:
   return data;
 };
 
 /**
- * Karena Sanctum token BUKAN JWT (opaque string),
- * kita tidak bisa decode/cek expiry via react-jwt.
- * Gantikan helper ini supaya tidak memakai react-jwt.
+ * Karena Sanctum token adalah opaque string,
+ * tidak bisa di-decode seperti JWT.
  */
 export const useDecodeToken = (token) => {
   if (!token) {
@@ -26,7 +21,6 @@ export const useDecodeToken = (token) => {
       data: null,
     };
   }
-  // Tidak bisa decode token Sanctum — anggap valid selama ada.
   return {
     success: true,
     message: "Sanctum opaque token; cannot decode payload",
@@ -35,8 +29,7 @@ export const useDecodeToken = (token) => {
 };
 
 /**
- * Logout: cukup kirim Authorization header.
- * Tidak perlu kirim body { token }.
+ * Logout user.
  */
 export const logout = async () => {
   const accessToken =
@@ -44,7 +37,7 @@ export const logout = async () => {
 
   const { data } = await API.post(
     "/logout",
-    {}, // body kosong
+    {},
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -53,10 +46,9 @@ export const logout = async () => {
   );
 
   // bersihkan storage
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("token");
-  localStorage.removeItem("userInfo");
-  localStorage.removeItem("role");
+  ["accessToken", "token", "userInfo", "role"].forEach((k) =>
+    localStorage.removeItem(k)
+  );
 
   return data;
 };
