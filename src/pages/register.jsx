@@ -1,7 +1,7 @@
 // src/pages/Register.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { API } from "../_api"; // ✅ gunakan API instance
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -43,8 +43,8 @@ export default function Register() {
     setErrorMsg(null);
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/register", {
-        name: formData.fullName,   // map ke 'name' backend
+      await API.post("/register", {
+        name: formData.fullName, // map ke field 'name' di backend
         email: formData.email,
         password: formData.password,
         password_confirmation: formData.confirmPassword,
@@ -54,14 +54,13 @@ export default function Register() {
       alert("Registration successful!");
       navigate("/login");
     } catch (err) {
-      // Ambil pesan dari backend jika ada
       const apiErr =
         err?.response?.data?.message ||
         err?.response?.data?.errors?.email ||
         err?.response?.data?.errors?.name ||
         err?.response?.data?.errors?.password;
       setErrorMsg(
-        Array.isArray(apiErr) ? apiErr.join(", ") : apiErr || "Registrtion failed!"
+        Array.isArray(apiErr) ? apiErr.join(", ") : apiErr || "Registration failed!"
       );
     } finally {
       setLoading(false);
@@ -74,14 +73,14 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-
-
       {/* PAGE CONTENT */}
       <main style={styles.container}>
         <div style={styles.card}>
           {/* Header */}
           <div style={styles.header}>
-            <h1 className="font-inter-bold text-2xl" style={styles.title}>Welcome!</h1>
+            <h1 className="font-inter-bold text-2xl" style={styles.title}>
+              Welcome!
+            </h1>
             <p className="font-inter-regular text-sm" style={styles.subtitle}>
               Create your account and start improving your English
             </p>
@@ -93,13 +92,13 @@ export default function Register() {
           {/* Register Form */}
           <form onSubmit={handleRegister} style={styles.form} noValidate>
             {/* Full Name */}
-            <div className="font-poppins-semibold text-sm" style={styles.inputGroup}>
+            <div style={styles.inputGroup}>
               <label style={styles.label}>Full Name</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.icon} aria-hidden>
                   👤
                 </span>
-                <input className="font-poppins-regular text-sm"
+                <input
                   type="text"
                   name="fullName"
                   value={formData.fullName}
@@ -113,12 +112,12 @@ export default function Register() {
 
             {/* Email */}
             <div style={styles.inputGroup}>
-              <label className="font-poppins-semibold text-sm" style={styles.label}>Email address</label>
+              <label style={styles.label}>Email address</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.icon} aria-hidden>
                   📧
                 </span>
-                <input className="font-poppins-regular text-sm"
+                <input
                   type="email"
                   name="email"
                   value={formData.email}
@@ -132,12 +131,12 @@ export default function Register() {
 
             {/* Password */}
             <div style={styles.inputGroup}>
-              <label  className="font-poppins-semibold text-sm" style={styles.label}>Create Password</label>
+              <label style={styles.label}>Create Password</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.icon} aria-hidden>
                   🔒
                 </span>
-                <input className="font-poppins-regular text-sm"
+                <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
@@ -146,7 +145,7 @@ export default function Register() {
                   style={styles.input}
                   required
                 />
-                <button 
+                <button
                   type="button"
                   onClick={togglePasswordVisibility}
                   style={styles.eyeButton}
@@ -159,12 +158,12 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div style={styles.inputGroup}>
-              <label className="font-poppins-semibold text-sm" style={styles.label}>Confirm Password</label>
+              <label style={styles.label}>Confirm Password</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.icon} aria-hidden>
                   🔒
                 </span>
-                <input className="font-poppins-regular text-sm"
+                <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
@@ -173,7 +172,7 @@ export default function Register() {
                   style={styles.input}
                   required
                 />
-                <button 
+                <button
                   type="button"
                   onClick={toggleConfirmPasswordVisibility}
                   style={styles.eyeButton}
@@ -187,7 +186,7 @@ export default function Register() {
             </div>
 
             {/* Submit */}
-            <button className="btn-inter-bold"
+            <button
               type="submit"
               style={{
                 ...styles.registerButton,
@@ -201,21 +200,19 @@ export default function Register() {
 
             {/* Link Login */}
             <div style={styles.loginSection}>
-              <span className="font-poppins-small text-xs" style={styles.loginText}>Already have an account? </span>
-              <Link to="/login" className="font-poppins-small" style={styles.loginLink}>
+              <span style={styles.loginText}>Already have an account? </span>
+              <Link to="/login" style={styles.loginLink}>
                 Login
               </Link>
             </div>
           </form>
         </div>
       </main>
-
-
     </div>
   );
 }
 
-/* ========== Inline styles untuk tampilan sesuai mockup ========== */
+/* ========== Inline styles untuk tampilan ========== */
 const styles = {
   container: {
     minHeight: "calc(100vh - 200px)",
