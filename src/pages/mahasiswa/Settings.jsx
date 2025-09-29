@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Home, Settings as IconSettings, LogOut, Menu } from "lucide-react";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
