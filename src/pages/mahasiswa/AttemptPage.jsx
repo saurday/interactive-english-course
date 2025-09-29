@@ -14,7 +14,7 @@ import {
 } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
 
 // ——— Modal kecil di tengah layar ———
 function CenterAlert({ open, text, onClose }) {
