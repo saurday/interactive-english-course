@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const url = "http://127.0.0.1:8000"; // alamat backend Laravel kamu
+const url = "https://laravel-interactive-english-course-production.up.railway.app"; // alamat backend Laravel kamu
 
 export const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "https://laravel-interactive-english-course-production.up.railway.app",
