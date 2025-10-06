@@ -22,6 +22,8 @@ import AssignmentBuilder from "./pages/dosen/AssignmentBuilder";
 import DosenDashboard from "./pages/dosen/dashboard";
 import Reports from "./pages/dosen/Reports.jsx"; // <-- PASTI ada
 import LecturerSettings from "./pages/dosen/Settings.jsx";
+import CefrLevelList from "./pages/dosen/CefrLevelList.jsx";
+import LecturerCefrModules from "./pages/dosen/LecturerCefrModules.jsx";
 
 /** Mahasiswa */
 import StudentWeekDetail from "./pages/mahasiswa/WeekDetail.jsx";
@@ -29,6 +31,10 @@ import AttemptPage from "./pages/mahasiswa/AttemptPage";
 import ReviewPage from "./pages/mahasiswa/ReviewPage";
 import MahasiswaDashboard from "./pages/mahasiswa/dashboard";
 import StudentSettings from "./pages/mahasiswa/Settings.jsx";
+import PlacementTest from "./pages/mahasiswa/PlacementTest.jsx";
+import PlacementReview from "./pages/mahasiswa/PlacementReview.jsx";
+import CefrModules from "./pages/mahasiswa/CefrModules.jsx";
+
 /** Admin */
 import AdminDashboard from "./pages/admin/dashboard";
 
@@ -69,6 +75,10 @@ export default function App() {
             element={<ReviewPage />}
           />
           <Route path="/student/settings" element={<StudentSettings />} />
+          <Route path="/student/placement-test" element={<PlacementTest />} />
+          <Route path="/student/placement-review" element={<PlacementReview />} />
+          <Route path="/student/cefr" element={<CefrModules />} />
+
         </Route>
 
         {/* ===== DOSEN ===== */}
@@ -104,6 +114,9 @@ export default function App() {
 
           <Route path="/lecture/reports" element={<Reports />} />
           <Route path="/lecture/settings" element={<LecturerSettings />} />
+          <Route path="/lecture/cefr" element={<CefrLevelList />} />
+          <Route path="/lecture/cefr/:level" element={<LecturerCefrModules />} />
+
         </Route>
 
         {/* ===== ADMIN ===== */}
