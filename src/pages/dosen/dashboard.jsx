@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Home,
+  BookOpen,
   Settings,
   LogOut,
   Plus,
@@ -15,6 +16,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
+  { label: "CEFR Modules", icon: <BookOpen size={18} />, to: "/lecture/cefr" },
   { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
   { label: "Settings", icon: <Settings size={18} />, to: "/lecture/settings" },
   { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
