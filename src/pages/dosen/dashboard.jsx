@@ -23,7 +23,7 @@ const sidebarMenuDosen = [
 ];
 
 const CACHE_KEY = "classes_cache_dosen";
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function DosenDashboard() {
   const navigate = useNavigate();
@@ -166,12 +166,16 @@ export default function DosenDashboard() {
         });
         if (!res.ok) throw new Error("Failed to update class");
         const updated = await res.json();
-        const next = classes.map((c) => (c.id === editingClass.id ? updated : c));
+        const next = classes.map((c) =>
+          c.id === editingClass.id ? updated : c
+        );
         syncCache(next);
       }
       setShowForm(false);
     } catch (err) {
-      alert(`${formMode === "create" ? "Create" : "Update"} error: ${err.message}`);
+      alert(
+        `${formMode === "create" ? "Create" : "Update"} error: ${err.message}`
+      );
     }
   };
 
@@ -214,52 +218,51 @@ export default function DosenDashboard() {
     <>
       {/* ====== STYLES (UI versi baru, aman untuk Vite) ====== */}
       <style>{`
+
+
+/* ====== STYLES (UI versi baru, aman untuk Vite) ====== */
 :root{
-  --primary:#7c3aed;
-  --primary-700:#6b46c1;
-  --primary-50:#f5f3ff;
-  --ring:#c4b5fd;
-  --ink:#1f2937;
-  --muted:#64748b;
-  --bg:#f8f7ff;
+  --primary:#7c3aed; --primary-50:#f5f3ff; --ink:#1f2937; --muted:#64748b; --bg:#f8f7ff;
 }
 
-body { font-family: 'Inter','Poppins',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
-.dashboard-container { display:flex; min-height:100vh; background:
-  radial-gradient(1200px 400px at 80% -100px, rgba(124,58,237,.06), transparent 60%),
-  var(--bg);
+body{
+  font-family:'Inter','Poppins',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 }
 
-/* Sidebar */
-.sidebar {
+.dashboard-container{
+  display:flex; min-height:100vh; background:
+    radial-gradient(1200px 400px at 80% -100px, rgba(124,58,237,.06), transparent 60%),
+    var(--bg);
+}
+
+/* ===== Sidebar (samakan dgn Settings) ===== */
+.sidebar{
   width:240px; background:#fff; border-right:1px solid #e2e8f0;
-  padding:16px; position:sticky; top:0; height:100vh;
+  padding:16px; position:sticky; top:0; height:100vh; z-index:950;
 }
 .sidebar-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.menu-item{
-  display:flex; align-items:center; gap:8px;
-  padding:10px; cursor:pointer; border-radius:8px; margin-bottom:10px;
-  color:#4a5568; font-weight:500; font-size:16px;
-}
-.menu-item.active, .menu-item:hover{ background:#f3f0ff; color:var(--primary); font-weight:600; }
-button.menu-item{ background:transparent; border:0; appearance:none; width:100%; text-align:left; }
 
-/* Content */
+/* Reset link style di sidebar (hilangkan underline & warna visited) */
+
+.menu-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#475569; font-weight:600; text-decoration:none; margin-bottom:6px; font-size:14px}
+.menu-item:hover{ background:#f3f0ff; color:var(--primary) }
+.menu-item.active{ background:#f3f0ff; color:var(--primary) }
+button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
+
+
+/* ===== Content & Typography (diperkecil) ===== */
 .content{ flex:1; padding:24px; max-width:1400px; margin:0 auto; }
 .content-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
 .page-title{
-  font-size:28px; font-weight:800; color:var(--ink); position:relative; padding-bottom:8px; margin:0;
-}
-.page-title::after{
-  content:""; position:absolute; left:0; bottom:0; height:6px; width:86px;
-  border-radius:6px; opacity:.28;
+  font-size:24px; font-weight:800; color:var(--ink); position:relative; padding-bottom:8px; margin:0;
 }
 
-/* Grid */
+
+/* ===== Grid ===== */
 .class-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
 @media (max-width:1200px){ .class-grid{ grid-template-columns:repeat(2,1fr); } }
 
-/* Card – putih aksen ungu */
+/* ===== Card – putih aksen ungu ===== */
 .class-card{
   position:relative; background:#fff;
   border:1px solid #e9d5ff; border-radius:14px; padding:18px;
@@ -271,36 +274,46 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
   background:linear-gradient(180deg,var(--primary),#a78bfa); opacity:.75;
 }
 .class-card:hover{ transform:translateY(-4px); box-shadow:0 10px 28px rgba(124,58,237,.15); }
-.card-title{ margin:0; font-weight:800; color:#111827; }
-.card-sub{ margin:6px 0 0; color:var(--muted); }
+.card-title{ margin:0; font-weight:800; color:#111827; font-size:16px; }
+.card-sub{ margin:6px 0 0; color:var(--muted); font-size:13px; }
 
-/* Badge */
-.pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-weight:700; font-size:12px; }
+/* ===== Badge ===== */
+.pill{
+  display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px;
+  font-weight:700; font-size:12px;
+}
 .code-pill{ background:var(--primary-50); color:var(--primary); border:1px solid #e9d5ff; }
 
-/* Buttons */
-.btn{ padding:10px 16px; border-radius:10px; border:1px solid transparent;
+/* ===== Buttons ===== */
+.btn{
+  padding:8px 14px; border-radius:10px; border:1px solid transparent;
   background:linear-gradient(135deg,var(--primary),#6d28d9); color:#fff; font-weight:700; cursor:pointer;
   box-shadow:0 6px 16px rgba(124,58,237,.25);
 }
 .btn:hover{ filter:saturate(1.05) brightness(.98); }
-.btn-ghost{ background:#fff; color:var(--primary); border-color:#e9d5ff; }
+.btn-ghost{ background:#fff; color:var(--primary); border:1px solid #e9d5ff; }
 .btn-ghost:hover{ background:#f6f5ff; }
 
-/* Kebab */
+/* ===== Kebab / Dropdown ===== */
 .card-actions{ position:relative; }
-.menu-btn{ padding:6px; border-radius:10px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 2px 6px rgba(0,0,0,.08); }
+.menu-btn{
+  padding:6px; border-radius:10px; background:#fff; border:1px solid #e5e7eb;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
 .dropdown{
   position:absolute; right:0; top:36px; background:#fff; border:1px solid #e5e7eb; border-radius:12px;
   box-shadow:0 16px 30px rgba(0,0,0,.12); width:180px; overflow:hidden;
 }
 .dropdown button{ border:0; outline:0; background:transparent; width:100%; text-align:left; }
-.dropdown-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; font-size:14px; color:#1f2937; cursor:pointer; }
+.dropdown-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; font-size:14px; color:#1f2937; cursor:pointer;
+}
 .dropdown-item:hover{ background:#f8fafc; }
 .dropdown-sep{ height:1px; background:#e5e7eb; margin:0 8px; }
-.dropdown-item.danger{ color:#dc2626; } .dropdown-item.danger:hover{ background:#fef2f2; }
+.dropdown-item.danger{ color:#dc2626; } 
+.dropdown-item.danger:hover{ background:#fef2f2; }
 
-/* FAB & visibility */
+/* ===== FAB & Visibility (desktop default) ===== */
 .fab-add{
   position:fixed; right:18px; bottom:18px;
   background:linear-gradient(135deg,var(--primary),#6d28d9); color:#fff;
@@ -310,17 +323,15 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
 }
 .fab-add:hover{ filter:saturate(1.05) brightness(.98); }
 
-/* Hamburger – hidden by default (desktop), show in mobile */
 .hamburger{
   border:1px solid #e2e8f0; background:#fff; border-radius:10px; padding:8px;
   display:none; align-items:center; justify-content:center;
 }
 .hamburger:hover{ background:#f8fafc; }
 
-/* Top New Class button – desktop only by default */
 .btn-top{ display:inline-flex; }
 
-/* Modal */
+/* ===== Modal ===== */
 .modal{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .modal-content{
   background:#fff; width:min(92vw,480px); border-radius:14px; border:1px solid #e5e7eb;
@@ -330,48 +341,32 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
 .modal-actions{ margin-top:16px; display:flex; justify-content:flex-end; gap:10px; }
 .input{ width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; }
 
-/* Backdrop for sidebar */
+/* ===== Backdrop ===== */
 .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:900; }
 
-/* Empty state */
+/* ===== Empty state ===== */
 .empty-state{ text-align:center; margin-top:80px; color:#64748b; }
 
 /* ===== MOBILE ===== */
 @media (max-width:640px){
-  .sidebar{ position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .25s ease; z-index:950; }
+  .sidebar{
+    position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%);
+    transition:transform .25s ease;
+  }
   .sidebar.open{ transform:translateX(0); }
 
-  /* Lebihkan lebar kartu dengan mengecilkan gutter konten */
   .content{ padding:10px 12px 84px; }
   .class-grid{ grid-template-columns:1fr; gap:14px; }
   .class-card{ margin-inline:2px; }
 
-  /* Judul & hamburger lebih ke kiri */
   .content-header{ gap:8px; }
-  .page-title{ font-size:24px; }
+  .page-title{ font-size:22px; }
 
-  /* Visibilitas */
-  .hamburger{ display:inline-flex; }
-  .btn-top{ display:none; }
+  .hamburger{ display:inline-flex; } /* tampil hanya di mobile */
+  .btn-top{ display:none; }          /* tombol “New Class” pindah ke FAB */
   .fab-add{ display:flex; }
-
-  /* hapus underline & warna ungu visited di sidebar */
-.sidebar a.menu-item,
-.sidebar a.menu-item:visited,
-.sidebar a.menu-item:hover,
-.sidebar a.menu-item:focus {
-  text-decoration: none !important;
-  color: #4a5568; /* sesuaikan dengan warna teks sidebar */
-}
-.sidebar a.menu-item.active {
-  color: var(--primary);         /* tetap bisa highlight aktif */
-  background: #f3f0ff;
-  font-weight: 600;
 }
 
-
-
-}
 `}</style>
 
       <div className="dashboard-container">
@@ -383,7 +378,7 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
         {/* ===== SIDEBAR ===== */}
         <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
           <div className="sidebar-header">
-            <h3 style={{ fontWeight: 700, margin: 0 }}>Dosen Dashboard</h3>
+            <h3 style={{ fontWeight: 700, margin: 0 }}>Lecturer</h3>
           </div>
 
           {sidebarMenuDosen.map(({ label, icon, to, action }) =>
@@ -436,7 +431,11 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
           </div>
 
           {/* FAB (mobile only via CSS) */}
-          <button className="fab-add" onClick={openCreate} aria-label="Create class">
+          <button
+            className="fab-add"
+            onClick={openCreate}
+            aria-label="Create class"
+          >
             <Plus size={22} />
           </button>
 
@@ -523,7 +522,10 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
           {/* ===== Modal Create / Edit ===== */}
           {showForm && (
             <div className="modal" onClick={() => setShowForm(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="modal-content"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <h3 style={{ marginTop: 0 }}>
                   {formMode === "create" ? "Create Class" : "Edit Class"}
                 </h3>
@@ -535,7 +537,10 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
                   onChange={(e) => setFormTitle(e.target.value)}
                 />
                 <div className="modal-actions">
-                  <button className="btn-ghost" onClick={() => setShowForm(false)}>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => setShowForm(false)}
+                  >
                     Cancel
                   </button>
                   <button className="btn" onClick={submitForm}>
@@ -555,7 +560,10 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
           {/* ===== Modal Confirm Delete ===== */}
           {confirmDeleteOpen && classToDelete && (
             <div className="modal" onClick={() => setConfirmDeleteOpen(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="modal-content"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <h3
                   style={{
                     marginTop: 0,
@@ -568,7 +576,8 @@ button.menu-item{ background:transparent; border:0; appearance:none; width:100%;
                   Delete Class
                 </h3>
                 <p style={{ marginTop: 8, color: "#334155", lineHeight: 1.5 }}>
-                  Are you sure you want to delete this class? This action cannot be undone.
+                  Are you sure you want to delete this class? This action cannot
+                  be undone.
                 </p>
                 <div className="modal-actions">
                   <button

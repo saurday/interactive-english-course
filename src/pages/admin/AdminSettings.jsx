@@ -1,7 +1,9 @@
+// src/pages/admin/AdminSettings.jsx
 import React, { useEffect, useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
-  Home,
+  LayoutDashboard,
+  Users,
   BarChart2,
   Settings as SettingsIcon,
   LogOut,
@@ -30,13 +32,15 @@ const getUserId = () => {
 };
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  Authorization: `Bearer ${
+    localStorage.getItem("token") || localStorage.getItem("accessToken") || ""
+  }`,
   Accept: "application/json",
   "Content-Type": "application/json",
 });
 
 /* ====== Page ====== */
-export default function LecturerSettings() {
+export default function AdminSettings() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -59,22 +63,27 @@ export default function LecturerSettings() {
   const userId = getUserId();
 
   const sidebar = [
-    { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, to: "/admin" },
+    { label: "Manage Users", icon: <Users size={18} />, to: "/admin/users" },
+    {
+      label: "User Progress",
+      icon: <BarChart2 size={18} />,
+      to: "/admin/progress",
+    },
     {
       label: "CEFR Modules",
+      to: "/admin/cefrmodules",
       icon: <BookOpen size={18} />,
-      to: "/lecture/cefr",
     },
-    { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
     {
       label: "Settings",
       icon: <SettingsIcon size={18} />,
-      to: "/lecture/settings",
+      to: "/admin/settings",
     },
     { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
   ];
 
-  // meta viewport (konsisten dengan halaman lain)
+  // meta viewport (konsisten)
   useEffect(() => {
     let meta = document.querySelector('meta[name="viewport"]');
     if (!meta) {
@@ -127,10 +136,9 @@ export default function LecturerSettings() {
     e?.preventDefault?.();
     try {
       localStorage.clear();
-    } catch {
-      /* ignore */
+    } finally {
+      navigate("/");
     }
-    navigate("/");
   };
 
   const saveProfile = async (e) => {
@@ -178,9 +186,8 @@ export default function LecturerSettings() {
         body: JSON.stringify(body),
       });
 
-      const j = await r.json();
+      const j = await r.json().catch(() => ({}));
       if (!r.ok) {
-        // tampilkan error dari backend bila ada
         const firstError =
           j?.message ||
           (j?.errors &&
@@ -189,7 +196,7 @@ export default function LecturerSettings() {
         throw new Error(firstError || `Gagal menyimpan (${r.status})`);
       }
 
-      // perbarui localStorage userInfo biar konsisten
+      // perbarui localStorage userInfo
       try {
         localStorage.setItem(
           "userInfo",
@@ -203,7 +210,6 @@ export default function LecturerSettings() {
       } catch {
         /* ignore */
       }
-
       // bersihkan field password
       setCurPwd("");
       setNewPwd("");
@@ -230,11 +236,9 @@ export default function LecturerSettings() {
   --muted:#64748b;
   --bg:#f8f7ff;
 }
-
 *,
 *::before,
 *::after { box-sizing:border-box; }
-
 html, body, #root { width:100%; height:100%; }
 body{
   font-family:'Inter','Poppins',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
@@ -243,7 +247,6 @@ body{
   margin:0;
   font-size:16px;
 }
-
 .layout{
   display:flex; min-height:100vh; width:100%;
   background:
@@ -256,18 +259,18 @@ body{
 .breadcrumb a:hover{ text-decoration:underline; }
 
 .card{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; width:100%; }
-.page-title{ font-size:28px; font-weight:800; margin:0 0 4px; }
+.page-title{ font-size:24px; font-weight:800; margin:0 0 4px; }
 
 .row{ display:grid; grid-template-columns:1fr; gap:16px; }
-.section-title{ font-size:16px; font-weight:800; margin:0 0 8px; }
-.input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; outline:none; }
+.section-title{ font-size:15px; font-weight:800; margin:0 0 8px; }
+.input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; outline:none; font-size:14px; }
 .input:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(124,58,237,.15); }
 .field{ display:grid; gap:6px; }
 .grid-2{ display:grid; gap:12px; grid-template-columns:1fr 1fr; }
 .help{ color:#64748b; font-size:12px; }
 
-.btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer;
-  border:1px solid #cbd5e1; background:#fff; }
+.btn{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer;
+  border:1px solid #cbd5e1; background:#fff; font-size:14px; }
 .btn-primary{ background:#6b46c1; color:#fff; border-color:#6b46c1; }
 .btn-primary:hover{ background:#553c9a; }
 .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
@@ -289,53 +292,24 @@ body{
   height: 100vh;
   z-index: 950;
 }
-
+/* Sidebar */
+.sidebar{width:240px; background:#fff; border-right:1px solid #e2e8f0; position:sticky; top:0; height:100vh; padding:14px; z-index:40}
+.sidebar h3{margin:0 0 10px; font-weight:800; font-size:18px}
 .menu-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#475569; font-weight:600; text-decoration:none; margin-bottom:6px; font-size:14px}
 .menu-item:hover{ background:#f3f0ff; color:var(--primary) }
 .menu-item.active{ background:#f3f0ff; color:var(--primary) }
 button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
 
-/* ==== Font scaling ==== */
-.page-title {
-  font-size: 24px;             /* dari 28px → 24px */
-  font-weight: 800;
-  margin: 0 0 4px;
-}
-
-.section-title {
-  font-size: 15px;
-}
-
-.input {
-  font-size: 14px;
-}
-
-.btn {
-  font-size: 14px;
-  padding: 8px 12px;
-}
-/* ==== Hamburger hidden on large screens ==== */
-@media (min-width: 641px) {
-  .breadcrumb .btn {
-    display: none !important;
-  }
-}
-
-/* === HAMBURGER (samakan dgn Reports) === */
 .hamburger{
   border:1px solid #e2e8f0; background:#fff; border-radius:10px; padding:8px;
   display:none; align-items:center; justify-content:center;
 }
 .hamburger:hover{ background:#f8fafc; }
-
-/* pill radius untuk tombol Save */
-
-/* backdrop ketika sidebar dibuka di HP */
 .backdrop{
   position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:940; display:none;
 }
 
-/* ===== MOBILE (ikut pola Reports) ===== */
+/* ===== MOBILE ===== */
 @media (max-width:640px){
   .sidebar{
     position:fixed; left:0; top:0; bottom:0; height:100vh;
@@ -347,27 +321,21 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
 
   .content{ padding:12px 14px 28px; max-width:none; }
   .breadcrumb .hamburger{ display:inline-flex; }
-
-  /* form 1 kolom di HP supaya lega */
   .grid-2{ grid-template-columns:1fr; }
-
-  /* tombol Save full-width di HP */
   .actions{ justify-content:stretch; }
   .actions .btn{ width:100%; }
 }
 
-/* ==== DESKTOP: sembunyikan hamburger di breadcrumb ==== */
+/* desktop: sembunyikan hamburger */
 @media (min-width:641px){
   .breadcrumb .hamburger{ display:none !important; }
 }
-
-
       `}</style>
 
       <div className="layout">
         {/* Sidebar */}
         <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-          <h3 style={{ margin: 0, marginBottom: 12 }}>Lecturer</h3>
+          <h3 style={{ margin: 0, marginBottom: 12 }}>Admin</h3>
           {sidebar.map(({ label, icon, to, action }) =>
             action === "logout" ? (
               <button
@@ -382,7 +350,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
               <NavLink
                 key={label}
                 to={to}
-                end={to === "/lecture"}
+                end={to === "/admin"} // exact hanya untuk dashboard
                 className={({ isActive }) =>
                   `menu-item ${isActive ? "active" : ""}`
                 }
@@ -394,7 +362,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
           )}
         </aside>
 
-        {/* BACKDROP – seperti di Reports */}
+        {/* BACKDROP */}
         {isSidebarOpen && (
           <div className="backdrop" onClick={() => setIsSidebarOpen(false)} />
         )}
@@ -409,18 +377,17 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
             >
               <Menu size={18} />
             </button>
-            <Link to="/lecture">Dashboard</Link>
+            <Link to="/admin">Dashboard</Link>
             <span>›</span>
             <span>Settings</span>
           </div>
-          {/* ... */}
 
           <div className="card" style={{ marginBottom: 16 }}>
             <h1
               className="page-title"
               style={{ display: "flex", alignItems: "center", gap: 8 }}
             >
-              <SettingsIcon size={22} /> Settings
+              <SettingsIcon size={22} /> Admin Settings
             </h1>
             <div style={{ color: "#64748b" }}>
               Perbarui informasi akun Anda.
@@ -502,7 +469,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                         </button>
                       </div>
                       <div className="help">
-                        Required if you want to change your password.
+                        Wajib diisi jika ingin mengganti password.
                       </div>
                     </div>
 
@@ -517,7 +484,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                           type={showNew ? "text" : "password"}
                           value={newPwd}
                           onChange={(e) => setNewPwd(e.target.value)}
-                          placeholder="Minimal 6 chacaracter"
+                          placeholder="Minimal 6 karakter"
                         />
                         <button
                           type="button"
@@ -541,7 +508,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                           type={showNew2 ? "text" : "password"}
                           value={newPwd2}
                           onChange={(e) => setNewPwd2(e.target.value)}
-                          placeholder="Re-enter new password"
+                          placeholder="Ulangi password baru"
                         />
                         <button
                           type="button"

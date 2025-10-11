@@ -14,7 +14,7 @@ import {
 } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ——— Modal kecil di tengah layar ———
 function CenterAlert({ open, text, onClose }) {
@@ -354,11 +354,10 @@ export default function AttemptPage() {
   const textTimers = useRef({});
 
   useEffect(() => {
-  return () => {
-    Object.values(textTimers.current || {}).forEach((t) => clearTimeout(t));
-  };
-}, []);
-
+    return () => {
+      Object.values(textTimers.current || {}).forEach((t) => clearTimeout(t));
+    };
+  }, []);
 
   const typeAnswer = (qId, text) => {
     setAnswers((m) => ({ ...m, [qId]: `__TEXT__::${text}` }));

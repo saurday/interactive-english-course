@@ -1,6 +1,11 @@
 // src/pages/dosen/QuizBuilder.jsx
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,14 +16,32 @@ import {
   Shuffle,
 } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Toast sederhana
 function Toast({ open, text }) {
   if (!open) return null;
   return (
-    <div style={{ position: "fixed", inset: 0, display: "grid", placeItems: "center", zIndex: 9999, pointerEvents: "none" }}>
-      <div style={{ pointerEvents: "auto", background: "#111827", color: "white", padding: "12px 16px", borderRadius: 10, boxShadow: "0 12px 30px rgba(0,0,0,.25)" }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        display: "grid",
+        placeItems: "center",
+        zIndex: 9999,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          pointerEvents: "auto",
+          background: "#111827",
+          color: "white",
+          padding: "12px 16px",
+          borderRadius: 10,
+          boxShadow: "0 12px 30px rgba(0,0,0,.25)",
+        }}
+      >
         {text}
       </div>
     </div>
@@ -45,20 +68,39 @@ export default function QuizBuilder() {
   // Struktur state pertanyaan — saat edit, kita simpan id question & id option jika ada
   const [questions, setQuestions] = useState([
     defaultType === "mcq"
-      ? { id: null, type: "mcq", prompt: "", options: ["", "", "", ""], answer: 0, __optionIds: [null, null, null, null] }
+      ? {
+          id: null,
+          type: "mcq",
+          prompt: "",
+          options: ["", "", "", ""],
+          answer: 0,
+          __optionIds: [null, null, null, null],
+        }
       : { id: null, type: "short", prompt: "", answers: "" },
   ]);
 
   const addMcq = () =>
     setQuestions((q) => [
       ...q,
-      { id: null, type: "mcq", prompt: "", options: ["", "", "", ""], answer: 0, __optionIds: [null, null, null, null] },
+      {
+        id: null,
+        type: "mcq",
+        prompt: "",
+        options: ["", "", "", ""],
+        answer: 0,
+        __optionIds: [null, null, null, null],
+      },
     ]);
   const addShort = () =>
-    setQuestions((q) => [...q, { id: null, type: "short", prompt: "", answers: "" }]);
+    setQuestions((q) => [
+      ...q,
+      { id: null, type: "short", prompt: "", answers: "" },
+    ]);
 
   const updateQ = (idx, patch) =>
-    setQuestions((qs) => qs.map((q, i) => (i === idx ? { ...q, ...patch } : q)));
+    setQuestions((qs) =>
+      qs.map((q, i) => (i === idx ? { ...q, ...patch } : q))
+    );
   const removeQ = (idx) => setQuestions((qs) => qs.filter((_, i) => i !== idx));
 
   const [saving, setSaving] = useState(false);
@@ -74,7 +116,10 @@ export default function QuizBuilder() {
     (async () => {
       try {
         const r = await fetch(`${BASE_URL}/api/quizzes/${quizId}`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         });
         if (!r.ok) throw new Error(`Load quiz failed (${r.status})`);
         const json = await r.json();
@@ -93,15 +138,28 @@ export default function QuizBuilder() {
           const t = String(qq.type || "").toUpperCase();
           const prompt = qq.question_text ?? qq.text ?? "";
           if (t === "SHORT_ANSWER") {
-            const ans = Array.isArray(qq.answers) ? qq.answers.join(", ") : String(qq.answers || "");
+            const ans = Array.isArray(qq.answers)
+              ? qq.answers.join(", ")
+              : String(qq.answers || "");
             return { id: qq.id, type: "short", prompt, answers: ans };
           }
           // multiple choice
-          const opts = (qq.options ?? []).map((op) => op.option_text ?? op.text ?? "");
-          const ids  = (qq.options ?? []).map((op) => op.id ?? null);
-          let correctIdx = (qq.options ?? []).findIndex((op) => !!op.is_correct);
+          const opts = (qq.options ?? []).map(
+            (op) => op.option_text ?? op.text ?? ""
+          );
+          const ids = (qq.options ?? []).map((op) => op.id ?? null);
+          let correctIdx = (qq.options ?? []).findIndex(
+            (op) => !!op.is_correct
+          );
           if (correctIdx < 0) correctIdx = 0;
-          return { id: qq.id, type: "mcq", prompt, options: opts, answer: correctIdx, __optionIds: ids };
+          return {
+            id: qq.id,
+            type: "mcq",
+            prompt,
+            options: opts,
+            answer: correctIdx,
+            __optionIds: ids,
+          };
         });
 
         setQuestions(qs.length ? qs : []);
@@ -157,7 +215,12 @@ export default function QuizBuilder() {
           },
           body: JSON.stringify(payload),
         });
-        if (!r1.ok) throw new Error(`Create quiz failed (${r1.status}) ${await r1.text().catch(() => "")}`);
+        if (!r1.ok)
+          throw new Error(
+            `Create quiz failed (${r1.status}) ${await r1
+              .text()
+              .catch(() => "")}`
+          );
         const quizJson = await r1.json();
         const createdQuiz = quizJson.quiz || quizJson;
         const newQuizId = createdQuiz.id;
@@ -170,10 +233,18 @@ export default function QuizBuilder() {
 
         const r2 = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
           body: fd,
         });
-        if (!r2.ok) throw new Error(`Create resource failed (${r2.status}) ${await r2.text().catch(() => "")}`);
+        if (!r2.ok)
+          throw new Error(
+            `Create resource failed (${r2.status}) ${await r2
+              .text()
+              .catch(() => "")}`
+          );
 
         // Cache ringan supaya sidebar WeekDetail langsung update (opsional)
         try {
@@ -197,11 +268,13 @@ export default function QuizBuilder() {
               items: payload.items,
             },
           };
-          const rest = (Array.isArray(all) ? all : []).filter((x) => Number(x.id) !== Number(newItem.id));
+          const rest = (Array.isArray(all) ? all : []).filter(
+            (x) => Number(x.id) !== Number(newItem.id)
+          );
           localStorage.setItem(key, JSON.stringify([...rest, newItem]));
-       } catch {
-        /* ignore */
-      }
+        } catch {
+          /* ignore */
+        }
 
         showToast("Quiz created");
       } else {
@@ -219,7 +292,9 @@ export default function QuizBuilder() {
                   type: "multiple_choice",
                   question_text: q.prompt || "",
                   options: q.options.map((text, idx) => ({
-                    id: Array.isArray(q.__optionIds) ? q.__optionIds[idx] ?? undefined : undefined,
+                    id: Array.isArray(q.__optionIds)
+                      ? q.__optionIds[idx] ?? undefined
+                      : undefined,
                     option_text: String(text),
                     is_correct: Number(q.answer) === idx,
                   })),
@@ -245,7 +320,10 @@ export default function QuizBuilder() {
           },
           body: JSON.stringify(payload),
         });
-        if (!r.ok) throw new Error(`Update failed (${r.status}) ${await r.text().catch(() => "")}`);
+        if (!r.ok)
+          throw new Error(
+            `Update failed (${r.status}) ${await r.text().catch(() => "")}`
+          );
 
         // segarkan cache lokal (opsional)
         try {
@@ -253,7 +331,9 @@ export default function QuizBuilder() {
           const raw = localStorage.getItem(key);
           const all = raw ? JSON.parse(raw) : [];
           const next = (Array.isArray(all) ? all : []).map((it) =>
-            it.type === "quiz" && (Number(it.quiz_id) === Number(quizId) || Number(it.quizId) === Number(quizId))
+            it.type === "quiz" &&
+            (Number(it.quiz_id) === Number(quizId) ||
+              Number(it.quizId) === Number(quizId))
               ? {
                   ...it,
                   title: meta.title || it.title,
@@ -266,7 +346,12 @@ export default function QuizBuilder() {
                     // simpan bentuk "items" sederhana agar viewer bisa render cepat
                     items: questions.map((q) =>
                       q.type === "mcq"
-                        ? { type: "mcq", prompt: q.prompt, options: q.options, answer: Number(q.answer) || 0 }
+                        ? {
+                            type: "mcq",
+                            prompt: q.prompt,
+                            options: q.options,
+                            answer: Number(q.answer) || 0,
+                          }
                         : {
                             type: "short",
                             prompt: q.prompt,
@@ -282,8 +367,8 @@ export default function QuizBuilder() {
           );
           localStorage.setItem(key, JSON.stringify(next));
         } catch {
-        /* ignore */
-      }
+          /* ignore */
+        }
 
         showToast("Quiz updated");
       }
@@ -307,16 +392,37 @@ export default function QuizBuilder() {
           {/* ===== Sidebar ===== */}
           <aside className="panel left">
             <div className="side-box">
-              <div className="side-title">{isEdit ? "Edit Quiz" : "Create Quiz"}</div>
-              <div className="side-kv"><span className="k">Class</span><span>#{classId}</span></div>
-              <div className="side-kv"><span className="k">Week</span><span>{week}</span></div>
+              <div className="side-title">
+                {isEdit ? "Edit Quiz" : "Create Quiz"}
+              </div>
+              <div className="side-kv">
+                <span className="k">Class</span>
+                <span>#{classId}</span>
+              </div>
+              <div className="side-kv">
+                <span className="k">Week</span>
+                <span>{week}</span>
+              </div>
 
               <hr style={{ border: "none", borderTop: "1px solid #eef2f7" }} />
-              <div className="side-title" style={{ fontSize: 14 }}>Tips</div>
-              <ul style={{ margin: 0, paddingLeft: 18, color: "#64748b", lineHeight: 1.6 }}>
-                <li>Centang <b>Shuffle questions</b> untuk acak urutan soal.</li>
+              <div className="side-title" style={{ fontSize: 14 }}>
+                Tips
+              </div>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  color: "#64748b",
+                  lineHeight: 1.6,
+                }}
+              >
+                <li>
+                  Centang <b>Shuffle questions</b> untuk acak urutan soal.
+                </li>
                 <li>Short-answer: pisahkan beberapa jawaban dengan koma.</li>
-                <li>Set <b>Time limit</b> ke 0 untuk tanpa batas waktu.</li>
+                <li>
+                  Set <b>Time limit</b> ke 0 untuk tanpa batas waktu.
+                </li>
               </ul>
             </div>
           </aside>
@@ -329,19 +435,34 @@ export default function QuizBuilder() {
               <ChevronRight size={16} />
               <Link to={`/lecture/classes/${classId}`}>Class</Link>
               <ChevronRight size={16} />
-              <Link to={`/lecture/classes/${classId}/weeks/${week}`}>Week {week}</Link>
+              <Link to={`/lecture/classes/${classId}/weeks/${week}`}>
+                Week {week}
+              </Link>
               <ChevronRight size={16} />
               <span>{isEdit ? "Edit Quiz" : "Create Quiz"}</span>
             </div>
 
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
               <h1 className="title" style={{ marginBottom: 4 }}>
                 {isEdit ? "Edit Quiz" : "Create Quiz"} —{" "}
-                <span style={{ color: "#64748b", fontWeight: 700 }}>Week {week}</span>
+                <span style={{ color: "#64748b", fontWeight: 700 }}>
+                  Week {week}
+                </span>
               </h1>
               <div style={{ display: "flex", gap: 8 }}>
-                <Link to={`/lecture/classes/${classId}/weeks/${week}`} className="btn" style={{ textDecoration: "none" }}>
+                <Link
+                  to={`/lecture/classes/${classId}/weeks/${week}`}
+                  className="btn"
+                  style={{ textDecoration: "none" }}
+                >
                   <ChevronLeft size={16} /> Back to week
                 </Link>
               </div>
@@ -350,21 +471,46 @@ export default function QuizBuilder() {
             {/* Meta panel */}
             <div className="panel" style={{ padding: 16, marginTop: 10 }}>
               <div style={{ display: "grid", gap: 10 }}>
-                <input className="input" placeholder="Quiz title" value={meta.title}
-                  onChange={(e) => setMeta((m) => ({ ...m, title: e.target.value }))} />
-                <textarea className="textarea" placeholder="Instructions" value={meta.instructions}
-                  onChange={(e) => setMeta((m) => ({ ...m, instructions: e.target.value }))} />
+                <input
+                  className="input"
+                  placeholder="Quiz title"
+                  value={meta.title}
+                  onChange={(e) =>
+                    setMeta((m) => ({ ...m, title: e.target.value }))
+                  }
+                />
+                <textarea
+                  className="textarea"
+                  placeholder="Instructions"
+                  value={meta.instructions}
+                  onChange={(e) =>
+                    setMeta((m) => ({ ...m, instructions: e.target.value }))
+                  }
+                />
                 <div className="meta-row">
                   <div className="meta-item">
                     <Clock size={16} />
-                    <input className="input" type="number" min={0} placeholder="Time limit (minutes, 0 = no limit)"
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      placeholder="Time limit (minutes, 0 = no limit)"
                       value={meta.time_limit}
-                      onChange={(e) => setMeta((m) => ({ ...m, time_limit: e.target.value }))} style={{ width: 260 }} />
+                      onChange={(e) =>
+                        setMeta((m) => ({ ...m, time_limit: e.target.value }))
+                      }
+                      style={{ width: 260 }}
+                    />
                   </div>
                   <label className="meta-item">
                     <Shuffle size={16} />
-                    <input type="checkbox" checked={meta.shuffle}
-                      onChange={(e) => setMeta((m) => ({ ...m, shuffle: e.target.checked }))} />
+                    <input
+                      type="checkbox"
+                      checked={meta.shuffle}
+                      onChange={(e) =>
+                        setMeta((m) => ({ ...m, shuffle: e.target.checked }))
+                      }
+                    />
                     Shuffle questions
                   </label>
                 </div>
@@ -378,29 +524,51 @@ export default function QuizBuilder() {
                   <li key={i} style={{ marginBottom: 12 }}>
                     <div className="q-card">
                       <div className="q-head">
-                        <span className="q-badge">{q.type === "mcq" ? "Multiple choice" : "Short answer"}</span>
+                        <span className="q-badge">
+                          {q.type === "mcq"
+                            ? "Multiple choice"
+                            : "Short answer"}
+                        </span>
                         <button className="q-del" onClick={() => removeQ(i)}>
                           <Trash2 size={16} /> Remove
                         </button>
                       </div>
 
-                      <input className="input" placeholder={`Q${i + 1} prompt`} value={q.prompt}
-                        onChange={(e) => updateQ(i, { prompt: e.target.value })} />
+                      <input
+                        className="input"
+                        placeholder={`Q${i + 1} prompt`}
+                        value={q.prompt}
+                        onChange={(e) => updateQ(i, { prompt: e.target.value })}
+                      />
 
                       {q.type === "mcq" ? (
                         <div style={{ marginTop: 6 }}>
                           {q.options.map((opt, j) => (
                             <div key={j} className="opt-row">
-                              <input type="radio" name={`ans-${i}`} checked={Number(q.answer) === j}
-                                onChange={() => updateQ(i, { answer: j })} />
-                              <input className="input" placeholder={`Option ${String.fromCharCode(65 + j)}`}
+                              <input
+                                type="radio"
+                                name={`ans-${i}`}
+                                checked={Number(q.answer) === j}
+                                onChange={() => updateQ(i, { answer: j })}
+                              />
+                              <input
+                                className="input"
+                                placeholder={`Option ${String.fromCharCode(
+                                  65 + j
+                                )}`}
                                 value={opt}
                                 onChange={(e) => {
                                   const next = [...q.options];
                                   next[j] = e.target.value;
-                                  const ids = Array.isArray(q.__optionIds) ? [...q.__optionIds] : [];
-                                  updateQ(i, { options: next, __optionIds: ids });
-                                }} />
+                                  const ids = Array.isArray(q.__optionIds)
+                                    ? [...q.__optionIds]
+                                    : [];
+                                  updateQ(i, {
+                                    options: next,
+                                    __optionIds: ids,
+                                  });
+                                }}
+                              />
                             </div>
                           ))}
                           {/* tombol tambah opsi (opsional) */}
@@ -409,7 +577,9 @@ export default function QuizBuilder() {
                               className="btn small"
                               onClick={() => {
                                 const next = [...q.options, ""];
-                                const ids = Array.isArray(q.__optionIds) ? [...q.__optionIds, null] : [null];
+                                const ids = Array.isArray(q.__optionIds)
+                                  ? [...q.__optionIds, null]
+                                  : [null];
                                 updateQ(i, { options: next, __optionIds: ids });
                               }}
                             >
@@ -418,17 +588,32 @@ export default function QuizBuilder() {
                           </div>
                         </div>
                       ) : (
-                        <input className="input" style={{ marginTop: 8 }}
+                        <input
+                          className="input"
+                          style={{ marginTop: 8 }}
                           placeholder="Acceptable answers (comma-separated)"
                           value={q.answers}
-                          onChange={(e) => updateQ(i, { answers: e.target.value })} />
+                          onChange={(e) =>
+                            updateQ(i, { answers: e.target.value })
+                          }
+                        />
                       )}
                     </div>
                   </li>
                 ))}
               </ol>
 
-              <div className="bottom-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, flexWrap: "wrap", gap: 8 }}>
+              <div
+                className="bottom-actions"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 12,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button className="btn btn-primary" onClick={addMcq}>
                     <PlusCircle size={16} /> Add MCQ
@@ -438,16 +623,40 @@ export default function QuizBuilder() {
                   </button>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn" onClick={() => navigate(-1)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={save} disabled={saving}>
+                  <button className="btn" onClick={() => navigate(-1)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={save}
+                    disabled={saving}
+                  >
                     <SaveIcon size={16} /> {saving ? "Saving…" : "Save"}
                   </button>
                 </div>
               </div>
 
               {saving && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.25)", display: "grid", placeItems: "center", zIndex: 9998 }}>
-                  <div style={{ background: "#fff", padding: "10px 14px", borderRadius: 10, fontWeight: 700 }}>Saving quiz…</div>
+                <div
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    background: "rgba(0,0,0,.25)",
+                    display: "grid",
+                    placeItems: "center",
+                    zIndex: 9998,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#fff",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Saving quiz…
+                  </div>
                 </div>
               )}
               <Toast open={toast.open} text={toast.text} />

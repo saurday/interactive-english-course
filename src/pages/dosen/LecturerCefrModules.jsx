@@ -1,10 +1,17 @@
 // src/pages/lecture/CefrModules.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight, MoreVertical, PlusCircle, Menu, X, Save } from "lucide-react";
+import {
+  ChevronRight,
+  MoreVertical,
+  PlusCircle,
+  Menu,
+  X,
+  Save,
+} from "lucide-react";
 
 /* ================== Constants ================== */
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /* ================== Little utils ================== */
 const resKey = (levelKey) => `cefr:${levelKey}:resources`;
@@ -24,13 +31,16 @@ function toYouTubeEmbed(raw) {
       if (v) return `https://www.youtube.com/embed/${v}`;
       if (u.pathname.startsWith("/embed/")) return raw;
       const parts = u.pathname.split("/").filter(Boolean);
-      if (parts[0] === "shorts" && parts[1]) return `https://www.youtube.com/embed/${parts[1]}`;
+      if (parts[0] === "shorts" && parts[1])
+        return `https://www.youtube.com/embed/${parts[1]}`;
     }
- } catch {
-      /* ignore and try next */
-    }  return raw;
+  } catch {
+    /* ignore and try next */
+  }
+  return raw;
 }
-const buildEmbedUrl = (url) => (!url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url);
+const buildEmbedUrl = (url) =>
+  !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
 function prepareEmbedSrc(rawUrl) {
   const url = String(rawUrl || "");
@@ -39,7 +49,10 @@ function prepareEmbedSrc(rawUrl) {
   if (url.includes("docs.google.com/presentation")) {
     let src = url;
     if (/(\/edit|\/present)/.test(src)) {
-      src = src.replace(/\/(edit|present).*$/, "/embed?start=false&loop=false&delayms=3000");
+      src = src.replace(
+        /\/(edit|present).*$/,
+        "/embed?start=false&loop=false&delayms=3000"
+      );
     }
     if (/\/pub(\?|$)/.test(src)) {
       src = src.replace(/\/pub(\?|$)/, "/embed?");
@@ -68,16 +81,17 @@ function prepareEmbedSrc(rawUrl) {
   const path = clean.split("?")[0];
   const ext = (path.split(".").pop() || "").toLowerCase();
 
-  if (["png","jpg","jpeg","gif","webp","bmp","svg"].includes(ext))
+  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext))
     return { type: "image", src: url, open: url };
-  if (["mp4","webm","ogg","m3u8"].includes(ext))
+  if (["mp4", "webm", "ogg", "m3u8"].includes(ext))
     return { type: "video", src: url, open: url };
-  if (["mp3","wav","oga","ogg"].includes(ext))
+  if (["mp3", "wav", "oga", "ogg"].includes(ext))
     return { type: "audio", src: url, open: url };
-  if (ext === "pdf")
-    return { type: "iframe", src: url, open: url };
-  if (["doc","docx","ppt","pptx","xls","xlsx"].includes(ext)) {
-    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+  if (ext === "pdf") return { type: "iframe", src: url, open: url };
+  if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
+    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+      url
+    )}`;
     return { type: "iframe", src: office, open: url };
   }
   return { type: "iframe", src: url, open: url };
@@ -87,9 +101,20 @@ function FileViewer({ url, title = "File" }) {
   const { type, src, open } = React.useMemo(() => prepareEmbedSrc(url), [url]);
   if (!url) return <div className="muted">No file URL.</div>;
 
-  if (type === "image") return <img src={src} alt={title} style={{ maxWidth: "100%", borderRadius: 12 }} />;
-  if (type === "video") return <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />;
-  if (type === "audio") return <audio src={src} controls style={{ width: "100%" }} />;
+  if (type === "image")
+    return (
+      <img
+        src={src}
+        alt={title}
+        style={{ maxWidth: "100%", borderRadius: 12 }}
+      />
+    );
+  if (type === "video")
+    return (
+      <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />
+    );
+  if (type === "audio")
+    return <audio src={src} controls style={{ width: "100%" }} />;
   if (type === "iframe")
     return (
       <div>
@@ -102,14 +127,25 @@ function FileViewer({ url, title = "File" }) {
           className="file-frame"
         />
         <div style={{ marginTop: 8 }}>
-          <a className="btn" href={open || src} target="_blank" rel="noreferrer">Open original</a>
+          <a
+            className="btn"
+            href={open || src}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open original
+          </a>
         </div>
       </div>
     );
   return (
     <div>
-      <div className="muted" style={{ marginBottom: 8 }}>File cannot be embedded. Try download:</div>
-      <a className="btn" href={url} rel="noreferrer" target="_blank">Download</a>
+      <div className="muted" style={{ marginBottom: 8 }}>
+        File cannot be embedded. Try download:
+      </div>
+      <a className="btn" href={url} rel="noreferrer" target="_blank">
+        Download
+      </a>
     </div>
   );
 }
@@ -142,15 +178,19 @@ async function fetchLevelHeader(levelKey, token) {
   for (const url of tries) {
     try {
       const r = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
       });
       if (r.ok) {
         const j = await r.json();
         return j.level || j.data || j;
       }
- } catch {
+    } catch {
       /* ignore and try next */
-    }  }
+    }
+  }
   throw new Error("Level not found");
 }
 
@@ -162,44 +202,54 @@ async function fetchCefrResources(levelId, token) {
   for (const url of tries) {
     try {
       const r = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
       });
       if (r.ok) {
         const j = await r.json();
         const arr = Array.isArray(j) ? j : j.resources || j.data || [];
         return arr.map(normalizeResource);
       }
- } catch {
+    } catch {
       /* ignore and try next */
-    }  }
+    }
+  }
   return [];
 }
 
+// src/pages/lecture/CefrModules.jsx  (hanya fungsi ini yang diubah)
+
 async function createCefrResource(levelId, payload, token) {
   const fd = new FormData();
-  fd.append("type", "composite");
   fd.append("title", payload.title || "");
-  if (payload.includeText) fd.append("text", payload.text || "");
+  if (payload.includeText)  fd.append("text", payload.text || "");
   if (payload.includeVideo) fd.append("video_url", payload.videoUrl || "");
-  if (payload.includeFile && payload.file) fd.append("file", payload.file);
+  if (payload.includeFile && payload.file)    fd.append("file", payload.file);
   if (payload.includeFile && payload.fileUrl) fd.append("file_url", payload.fileUrl);
 
-  const urls = [
-    `${BASE_URL}/api/cefr-levels/${levelId}/resources`,
-    `${BASE_URL}/api/cefr/levels/${levelId}/resources`,
-  ];
-  let lastErr = "";
-  for (const url of urls) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      body: fd,
-    });
-    if (r.ok) return normalizeResource(await r.json());
-    lastErr = `${r.status} ${await r.text().catch(() => "")}`;
+  const url = `${BASE_URL}/api/cefr-levels/${levelId}/resources`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",     // ← penting supaya Laravel balas JSON (bukan HTML)
+    },
+    body: fd,
+  });
+
+  if (!r.ok) {
+    let msg = await r.text();
+    try { msg = JSON.parse(msg).message || msg;  } catch {
+      /* ignore */
+    }
+    throw new Error(`Create failed (${r.status}): ${msg}`);
   }
-  throw new Error(`Create failed: ${lastErr}`);
+  return normalizeResource(await r.json());
 }
+
+
 
 async function updateResource(resourceId, payload, token) {
   const fd = new FormData();
@@ -256,54 +306,150 @@ function EditMaterialModal({ open, data, onClose, onSave }) {
   return (
     <div
       className="modal-overlay"
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "grid", placeItems: "center", padding: 16, zIndex: 2000 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,.35)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        zIndex: 2000,
+      }}
       onClick={onClose}
     >
-      <div className="panel" style={{ width: "100%", maxWidth: 720, padding: 18 }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontWeight: 800 }}>{form?.id ? "Update Material" : "Add Material"}</div>
-          <button className="inline-btn" onClick={onClose}><X size={16} /> Close</button>
+      <div
+        className="panel"
+        style={{ width: "100%", maxWidth: 720, padding: 18 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ fontWeight: 800 }}>
+            {form?.id ? "Update Material" : "Add Material"}
+          </div>
+          <button className="inline-btn" onClick={onClose}>
+            <X size={16} /> Close
+          </button>
         </div>
 
         <div>
-          <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>Title</label>
-          <input className="input" value={form.title ?? ""} onChange={(e) => set({ title: e.target.value })} />
+          <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>
+            Title
+          </label>
+          <input
+            className="input"
+            value={form.title ?? ""}
+            onChange={(e) => set({ title: e.target.value })}
+          />
         </div>
 
         <div style={{ marginTop: 10 }}>
-          <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>Include:</label>
-          <label><input type="checkbox" checked={form.includeText} onChange={(e) => set({ includeText: e.target.checked })} /> Text</label>
-          <label style={{ marginLeft: 10 }}><input type="checkbox" checked={form.includeVideo} onChange={(e) => set({ includeVideo: e.target.checked })} /> Video (URL)</label>
-          <label style={{ marginLeft: 10 }}><input type="checkbox" checked={form.includeFile} onChange={(e) => set({ includeFile: e.target.checked })} /> File (upload/URL)</label>
+          <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>
+            Include:
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.includeText}
+              onChange={(e) => set({ includeText: e.target.checked })}
+            />{" "}
+            Text
+          </label>
+          <label style={{ marginLeft: 10 }}>
+            <input
+              type="checkbox"
+              checked={form.includeVideo}
+              onChange={(e) => set({ includeVideo: e.target.checked })}
+            />{" "}
+            Video (URL)
+          </label>
+          <label style={{ marginLeft: 10 }}>
+            <input
+              type="checkbox"
+              checked={form.includeFile}
+              onChange={(e) => set({ includeFile: e.target.checked })}
+            />{" "}
+            File (upload/URL)
+          </label>
         </div>
 
         {form.includeText && (
           <div style={{ marginTop: 10 }}>
-            <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>Content</label>
-            <textarea className="textarea" value={form.text || ""} onChange={(e) => set({ text: e.target.value })} />
+            <label
+              style={{ fontWeight: 700, display: "block", marginBottom: 6 }}
+            >
+              Content
+            </label>
+            <textarea
+              className="textarea"
+              value={form.text || ""}
+              onChange={(e) => set({ text: e.target.value })}
+            />
           </div>
         )}
 
         {form.includeVideo && (
           <div style={{ marginTop: 10 }}>
-            <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>Video URL</label>
-            <input className="input" value={form.videoUrl || ""} onChange={(e) => set({ videoUrl: e.target.value })} />
+            <label
+              style={{ fontWeight: 700, display: "block", marginBottom: 6 }}
+            >
+              Video URL
+            </label>
+            <input
+              className="input"
+              value={form.videoUrl || ""}
+              onChange={(e) => set({ videoUrl: e.target.value })}
+            />
           </div>
         )}
 
         {form.includeFile && (
           <div style={{ marginTop: 10 }}>
-            <label style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>File (upload or URL)</label>
-            <input className="input" type="file" accept=".pdf,.ppt,.pptx,.doc,.docx" onChange={(e) => setLocalFile(e.target.files?.[0] || null)} />
+            <label
+              style={{ fontWeight: 700, display: "block", marginBottom: 6 }}
+            >
+              File (upload or URL)
+            </label>
+            <input
+              className="input"
+              type="file"
+              accept=".pdf,.ppt,.pptx,.doc,.docx"
+              onChange={(e) => setLocalFile(e.target.files?.[0] || null)}
+            />
             <div style={{ height: 8 }} />
-            <input className="input" placeholder="Or File URL" value={form.fileUrl || ""} onChange={(e) => set({ fileUrl: e.target.value })} />
-            <div className="cmt-meta" style={{ marginTop: 6 }}>Use either upload or URL.</div>
+            <input
+              className="input"
+              placeholder="Or File URL"
+              value={form.fileUrl || ""}
+              onChange={(e) => set({ fileUrl: e.target.value })}
+            />
+            <div className="cmt-meta" style={{ marginTop: 6 }}>
+              Use either upload or URL.
+            </div>
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => onSave({ ...form, file: localFile || null })}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginTop: 14,
+          }}
+        >
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => onSave({ ...form, file: localFile || null })}
+          >
             <Save size={16} /> Save
           </button>
         </div>
@@ -314,7 +460,7 @@ function EditMaterialModal({ open, data, onClose, onSave }) {
 
 /* ================== Main Page ================== */
 export default function LecturerCefrModules() {
-  const { level } = useParams();          // e.g. "A1" atau "3"
+  const { level } = useParams(); // e.g. "A1" atau "3"
   const token = localStorage.getItem("token") || "";
   const role = localStorage.getItem("role") || "dosen";
 
@@ -342,8 +488,10 @@ export default function LecturerCefrModules() {
 
   useEffect(() => {
     const onDoc = (e) => {
-      if (addRef.current && !addRef.current.contains(e.target)) setAddOpen(false);
-      if (actionsRef.current && !actionsRef.current.contains(e.target)) setActionsOpen(false);
+      if (addRef.current && !addRef.current.contains(e.target))
+        setAddOpen(false);
+      if (actionsRef.current && !actionsRef.current.contains(e.target))
+        setActionsOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -374,9 +522,9 @@ export default function LecturerCefrModules() {
           setItems(cached);
           setActive(0);
         }
- } catch {
-      /* ignore and try next */
-    }
+      } catch {
+        /* ignore and try next */
+      }
       // fresh
       try {
         const vids = info?.id || (isNum(level) ? Number(level) : null);
@@ -413,8 +561,11 @@ export default function LecturerCefrModules() {
     setSideOpen(false);
   }
 
-  async function saveMaterial(updated) {
-    try {
+async function saveMaterial(updated) {
+  if (!updated.includeText && !updated.includeVideo && !updated.includeFile) {
+    alert("Pilih minimal satu: Text, Video, atau File.");
+    return;
+  }    try {
       let saved;
       if (updated.id) saved = await updateResource(updated.id, updated, token);
       else {
@@ -424,7 +575,9 @@ export default function LecturerCefrModules() {
 
       setItems((prev) => {
         const exists = prev.some((p) => p.id === saved.id);
-        const next = exists ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved];
+        const next = exists
+          ? prev.map((p) => (p.id === saved.id ? saved : p))
+          : [...prev, saved];
         localStorage.setItem(resKey(level), JSON.stringify(next));
         return next;
       });
@@ -517,7 +670,9 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
     <>
       <style>{styles}</style>
 
-      {sideOpen && <div className="backdrop show" onClick={() => setSideOpen(false)} />}
+      {sideOpen && (
+        <div className="backdrop show" onClick={() => setSideOpen(false)} />
+      )}
 
       <div className="wrap">
         {/* LEFT */}
@@ -529,7 +684,11 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
 
             {role === "dosen" && (
               <div className="actions-menu" ref={addRef}>
-                <button className="inline-btn btn-primary" onClick={() => setAddOpen((s) => !s)} title="Add">
+                <button
+                  className="inline-btn btn-primary"
+                  onClick={() => setAddOpen((s) => !s)}
+                  title="Add"
+                >
                   <PlusCircle size={16} />
                 </button>
                 {addOpen && (
@@ -555,7 +714,10 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                 <div
                   key={it.id}
                   className={`step ${i === active ? "active" : ""}`}
-                  onClick={() => { setActive(i); setSideOpen(false); }}
+                  onClick={() => {
+                    setActive(i);
+                    setSideOpen(false);
+                  }}
                 >
                   <span className="idx">{i + 1}.</span>
                   <span>{it.title || `Material ${i + 1}`}</span>
@@ -568,7 +730,11 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
         {/* RIGHT */}
         <section className="panel right">
           <div className="mobile-top">
-            <button className="hamburger" aria-label="Open sidebar" onClick={() => setSideOpen(true)}>
+            <button
+              className="hamburger"
+              aria-label="Open sidebar"
+              onClick={() => setSideOpen(true)}
+            >
               <Menu size={18} />
             </button>
             <div style={{ fontWeight: 800 }}>
@@ -581,19 +747,32 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
             <ChevronRight size={16} />
             <span>CEFR Modules</span>
             <ChevronRight size={16} />
-            <span>{levelInfo?.name || levelInfo?.code || String(level).toUpperCase()}</span>
+            <span>
+              {levelInfo?.name ||
+                levelInfo?.code ||
+                String(level).toUpperCase()}
+            </span>
           </div>
 
           {role === "dosen" && items.length > 0 && (
-            <div className="toolbar" style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div
+              className="toolbar"
+              style={{ display: "flex", justifyContent: "flex-end" }}
+            >
               <div className="actions-menu" ref={actionsRef}>
-                <button className="inline-btn" onClick={() => setActionsOpen((s) => !s)} title="Actions">
+                <button
+                  className="inline-btn"
+                  onClick={() => setActionsOpen((s) => !s)}
+                  title="Actions"
+                >
                   <MoreVertical size={18} />
                 </button>
                 {actionsOpen && (
                   <div className="dropdown">
                     <button onClick={() => openAdd(current)}>Edit</button>
-                    <button onClick={handleDelete} style={{ color: "#b91c1c" }}>Delete</button>
+                    <button onClick={handleDelete} style={{ color: "#b91c1c" }}>
+                      Delete
+                    </button>
                   </div>
                 )}
               </div>
@@ -604,18 +783,32 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
             <div className="viewer">
               <div className="skel skel-title shimmer" />
               <div className="skel skel-line shimmer" />
-              <div className="skel skel-line shimmer" style={{ width: "90%" }} />
-              <div className="skel skel-iframe shimmer" style={{ marginTop: 14 }} />
+              <div
+                className="skel skel-line shimmer"
+                style={{ width: "90%" }}
+              />
+              <div
+                className="skel skel-iframe shimmer"
+                style={{ marginTop: 14 }}
+              />
             </div>
           ) : !current ? (
             <div className="muted">No content found for this level.</div>
           ) : (
             <div className="viewer">
-              <h1 className="title">{`${active + 1}. ${current.title || "Material"}`}</h1>
+              <h1 className="title">{`${active + 1}. ${
+                current.title || "Material"
+              }`}</h1>
 
               {/* TEXT (optional) */}
               {current.text && (
-                <section style={{ lineHeight: 1.7, whiteSpace: "pre-wrap", marginBottom: 16 }}>
+                <section
+                  style={{
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-wrap",
+                    marginBottom: 16,
+                  }}
+                >
                   {current.text}
                 </section>
               )}
@@ -627,7 +820,12 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                     <iframe
                       title={current.title || "Video"}
                       src={buildEmbedUrl(current.videoUrl)}
-                      style={{ width: "100%", height: "100%", border: 0, borderRadius: 12 }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        border: 0,
+                        borderRadius: 12,
+                      }}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       referrerPolicy="strict-origin-when-cross-origin"
                       allowFullScreen
@@ -639,15 +837,34 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
               {/* FILE (optional) */}
               {current.fileUrl && (
                 <section style={{ marginTop: 16 }}>
-                  <FileViewer url={current.fileUrl} title={current.title || "File"} />
+                  <FileViewer
+                    url={current.fileUrl}
+                    title={current.title || "File"}
+                  />
                 </section>
               )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 22 }}>
-                <button className="btn" disabled={active === 0} onClick={() => setActive((i) => Math.max(0, i - 1))}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 22,
+                }}
+              >
+                <button
+                  className="btn"
+                  disabled={active === 0}
+                  onClick={() => setActive((i) => Math.max(0, i - 1))}
+                >
                   Previous
                 </button>
-                <button className="btn" disabled={active === items.length - 1} onClick={() => setActive((i) => Math.min(items.length - 1, i + 1))}>
+                <button
+                  className="btn"
+                  disabled={active === items.length - 1}
+                  onClick={() =>
+                    setActive((i) => Math.min(items.length - 1, i + 1))
+                  }
+                >
                   Next
                 </button>
               </div>
@@ -657,7 +874,12 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
       </div>
 
       {/* Modal */}
-      <EditMaterialModal open={showEdit} data={editing} onClose={() => setShowEdit(false)} onSave={saveMaterial} />
+      <EditMaterialModal
+        open={showEdit}
+        data={editing}
+        onClose={() => setShowEdit(false)}
+        onSave={saveMaterial}
+      />
     </>
   );
 }

@@ -36,8 +36,14 @@ import PlacementReview from "./pages/mahasiswa/PlacementReview.jsx";
 import CefrModules from "./pages/mahasiswa/CefrModules.jsx";
 
 /** Admin */
-import AdminDashboard from "./pages/admin/dashboard";
-
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminProgress from "./pages/admin/AdminProgress";
+import ManageUsers from "./pages/admin/ManageUsers";
+import AdminSettings from "./pages/admin/AdminSettings";
+import UserProgress from "./pages/admin/UserProgress";
+import AdminCefrModules from "./pages/admin/CefrModules";
 /** Layout & guards */
 import PublicLayout from "./layouts/PublicLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -76,9 +82,11 @@ export default function App() {
           />
           <Route path="/student/settings" element={<StudentSettings />} />
           <Route path="/student/placement-test" element={<PlacementTest />} />
-          <Route path="/student/placement-review" element={<PlacementReview />} />
-          <Route path="/student/cefr" element={<CefrModules />} />
-
+          <Route
+            path="/student/placement-review"
+            element={<PlacementReview />}
+          />
+  <Route path="/student/cefr" element={<CefrModules />} />
         </Route>
 
         {/* ===== DOSEN ===== */}
@@ -115,13 +123,19 @@ export default function App() {
           <Route path="/lecture/reports" element={<Reports />} />
           <Route path="/lecture/settings" element={<LecturerSettings />} />
           <Route path="/lecture/cefr" element={<CefrLevelList />} />
-          <Route path="/lecture/cefr/:level" element={<LecturerCefrModules />} />
-
+          <Route
+            path="/lecture/cefr/:level"
+            element={<LecturerCefrModules />}
+          />
         </Route>
 
         {/* ===== ADMIN ===== */}
         <Route element={<ProtectedRoute allow={["admin"]} />}>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<ManageUsers />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/progress" element={<UserProgress />} />
+          <Route path="/admin/cefrmodules" element={<AdminCefrModules />} />
         </Route>
 
         {/* ===== WILDCARD (fallback) ===== */}

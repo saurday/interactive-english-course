@@ -16,7 +16,7 @@ export default function Fitur() {
       <div className="features-wrap" style={styles.container}>
         <div style={styles.header}>
           <h2 className="features-title font-poppins-bold" style={styles.title}>
-            Why This <span style={styles.orangeText}>Interactive Book</span>?
+            Why This <span style={styles.orangeText}>Interactive Web</span>?
           </h2>
 
           <div style={styles.description}>

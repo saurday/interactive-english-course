@@ -48,28 +48,44 @@ export default function About() {
         <section className="hero">
           <div>
             <div className="pill" style={{ marginBottom: 10 }}>
-              <Sparkles size={16}/> Interactive English Course
+              <Sparkles size={16} /> LEXENT
             </div>
             <h1 className="title">About this Web</h1>
             <p className="lead">
-              Interactive English Course helps <b>students</b> build English skills
-              through bite-sized weekly steps, quick practice, and clear progress.
-              Learn at your own pace with videos, readings, quizzes, and discussions—
+              LEXENT helps <b>students</b> build English skills through
+              bite-sized weekly steps, quick practice, and clear progress. Learn
+              at your own pace with videos, readings, quizzes, and discussions—
               all in one place.
             </p>
 
-            <div style={{ display:"grid", gap:12, marginTop:12 }}>
+            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
               <div className="mini">
-                <CheckCircle2 color="#16a34a" size={18}/>
-                <div><b>Guided</b><div className="muted">Each week is split into steps so you always know what’s next.</div></div>
+                <CheckCircle2 color="#16a34a" size={18} />
+                <div>
+                  <b>Guided</b>
+                  <div className="muted">
+                    Each week is split into steps so you always know what’s
+                    next.
+                  </div>
+                </div>
               </div>
               <div className="mini">
-                <CheckCircle2 color="#16a34a" size={18}/>
-                <div><b>Practical</b><div className="muted">Real tasks: watch, read, answer, submit, and discuss.</div></div>
+                <CheckCircle2 color="#16a34a" size={18} />
+                <div>
+                  <b>Practical</b>
+                  <div className="muted">
+                    Real tasks: watch, read, answer, submit, and discuss.
+                  </div>
+                </div>
               </div>
               <div className="mini">
-                <CheckCircle2 color="#16a34a" size={18}/>
-                <div><b>Trackable</b><div className="muted">Your progress is saved to the database—resume anytime.</div></div>
+                <CheckCircle2 color="#16a34a" size={18} />
+                <div>
+                  <b>Trackable</b>
+                  <div className="muted">
+                    Your progress is saved to the database—resume anytime.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -88,22 +104,24 @@ export default function About() {
           <div className="card">
             <h3 className="section-title">What you’ll experience</h3>
             <p className="muted">
-              Simple navigation, clear steps, instant previews for files and videos,
-              and quick feedback from quizzes or instructors. You can mark items as
-              complete and see your progress grow each week.
+              Simple navigation, clear steps, instant previews for files and
+              videos, and quick feedback from quizzes or instructors. You can
+              mark items as complete and see your progress grow each week.
             </p>
           </div>
           <div className="card">
             <h3 className="section-title">Designed for learners</h3>
             <p className="muted">
-              Lightweight and distraction-free. Whether on laptop or phone, everything
-              stays readable and fast so you can focus on learning English.
+              Lightweight and distraction-free. Whether on laptop or phone,
+              everything stays readable and fast so you can focus on learning
+              English.
             </p>
           </div>
         </section>
 
-        <p className="muted" style={{ textAlign:"center", marginTop:28 }}>
-          Learn smarter, not harder. <BookOpenCheck size={16} style={{verticalAlign:"-3px"}}/>
+        <p className="muted" style={{ textAlign: "center", marginTop: 28 }}>
+          Learn smarter, not harder.{" "}
+          <BookOpenCheck size={16} style={{ verticalAlign: "-3px" }} />
         </p>
       </div>
     </>

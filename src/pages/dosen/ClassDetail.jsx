@@ -14,16 +14,18 @@ import {
   MoreVertical,
   Pencil,
   Menu,
-  BarChart2
+  BarChart2,
+  BookOpen,
 } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
-{ label: "Reports",  icon: <BarChart2 size={18} />, to: "/lecture/reports" },
-  { label: "Settings", icon: <Settings size={18} />, to: "/lecture" },
-  { label: "Logout", icon: <LogOut size={18} />, to: "/" },
+  { label: "CEFR Modules", icon: <BookOpen size={18} />, to: "/lecture/cefr" },
+  { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
+  { label: "Settings", icon: <Settings size={18} />, to: "/lecture/settings" },
+  { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
 ];
 
 export default function ClassDetail() {
@@ -185,53 +187,48 @@ export default function ClassDetail() {
     }
   }
 
-async function fetchClassStudents(classId, token) {
-  const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
-
-  // 1) coba /students
-  let r = await fetch(`${BASE_URL}/api/kelas/${classId}/students`, { headers });
-
-  // 2) fallback /mahasiswa kalau 404 atau payload tidak berisi data
-  if (r.status === 404 || r.status === 405) {
-    r = await fetch(`${BASE_URL}/api/kelas/${classId}/mahasiswa`, { headers });
-  }
-
-  if (!r.ok) throw new Error(`Failed to load students (${r.status})`);
-
-  const j = await r.json();
-
-  // normalisasi berbagai bentuk payload:
-  // - {students:[...]}, {mahasiswa:[...]}, atau langsung array
-  const raw =
-    (Array.isArray(j?.students) && j.students) ||
-    (Array.isArray(j?.mahasiswa) && j.mahasiswa) ||
-    (Array.isArray(j) && j) ||
-    [];
-
-  // beberapa API mengembalikan row join: {mahasiswa:{...}, joined_at:...}
-  return raw.map((row, i) => {
-    const m = row.mahasiswa || row.student || row.user || row; // fallback ke objek dalam
-
-    return {
-      id:
-        m?.id ??
-        row.id ??
-        row.mahasiswa_id ??
-        row.student_id ??
-        `row-${i}`,
-      name:
-        m?.full_name ??
-        m?.nama_lengkap ??
-        m?.name ??
-        m?.nama ??
-        "-",
-      email: m?.email ?? "",
-      joinedAt: row.joined_at ?? row.created_at ?? m?.joined_at ?? null,
+  async function fetchClassStudents(classId, token) {
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
     };
-  });
-}
 
- 
+    // 1) coba /students
+    let r = await fetch(`${BASE_URL}/api/kelas/${classId}/students`, {
+      headers,
+    });
+
+    // 2) fallback /mahasiswa kalau 404 atau payload tidak berisi data
+    if (r.status === 404 || r.status === 405) {
+      r = await fetch(`${BASE_URL}/api/kelas/${classId}/mahasiswa`, {
+        headers,
+      });
+    }
+
+    if (!r.ok) throw new Error(`Failed to load students (${r.status})`);
+
+    const j = await r.json();
+
+    // normalisasi berbagai bentuk payload:
+    // - {students:[...]}, {mahasiswa:[...]}, atau langsung array
+    const raw =
+      (Array.isArray(j?.students) && j.students) ||
+      (Array.isArray(j?.mahasiswa) && j.mahasiswa) ||
+      (Array.isArray(j) && j) ||
+      [];
+
+    // beberapa API mengembalikan row join: {mahasiswa:{...}, joined_at:...}
+    return raw.map((row, i) => {
+      const m = row.mahasiswa || row.student || row.user || row; // fallback ke objek dalam
+
+      return {
+        id: m?.id ?? row.id ?? row.mahasiswa_id ?? row.student_id ?? `row-${i}`,
+        name: m?.full_name ?? m?.nama_lengkap ?? m?.name ?? m?.nama ?? "-",
+        email: m?.email ?? "",
+        joinedAt: row.joined_at ?? row.created_at ?? m?.joined_at ?? null,
+      };
+    });
+  }
 
   // 1) restore dari localStorage
   useEffect(() => {
@@ -385,12 +382,10 @@ body{
   width:240px; background:#fff; border-right:1px solid #e5e7eb; padding:16px;
   position:sticky; top:0; height:100vh; z-index:950;
 }
-.menu-item{
-  display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px;
-  color:#4a5568; font-weight:600; cursor:pointer; text-decoration:none; font-size:16px; line-height:1.5;
-}
-.menu-item:hover{ background:#f3f0ff; color:var(--primary); }
-button.menu-item{ background:transparent; border:0; width:100%; text-align:left; }
+.menu-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#475569; font-weight:600; text-decoration:none; margin-bottom:6px; font-size:14px}
+.menu-item:hover{ background:#f3f0ff; color:var(--primary) }
+.menu-item.active{ background:#f3f0ff; color:var(--primary) }
+button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
 
 /* Backdrop untuk sidebar mobile */
 .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:900; display:none; }
@@ -895,7 +890,9 @@ function Tabs({
           {stuLoading ? (
             <div className="muted">Loading students…</div>
           ) : filtered.length === 0 ? (
-            <div className="muted">There are no students in this class yet.</div>
+            <div className="muted">
+              There are no students in this class yet.
+            </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table
@@ -926,7 +923,7 @@ function Tabs({
                     >
                       Nama
                     </th>
-            
+
                     <th
                       style={{
                         width: 260,
@@ -971,7 +968,7 @@ function Tabs({
                       >
                         {s.name || "-"}
                       </td>
-                 
+
                       <td
                         style={{
                           padding: "10px 8px",
@@ -1001,16 +998,27 @@ function Tabs({
     </>
   );
 }
-
-/* ====================== Modals ====================== */
+// ===== Modal Add Resource / Create Week (COMPOSITE) =====
 function CreateWeekModal({ onClose, onSave }) {
   const { id: classId } = useParams();
   const token = localStorage.getItem("token");
 
   const [saving, setSaving] = useState(false);
   const [week, setWeek] = useState("");
+
+  // setiap baris bisa include Text/Video/File sekaligus (composite)
   const [rows, setRows] = useState([
-    { id: 1, type: "text", title: "", text: "", videoUrl: "", file: null },
+    {
+      id: 1,
+      title: "",
+      includeText: true,
+      text: "",
+      includeVideo: false,
+      videoUrl: "",
+      includeFile: false,
+      file: null,
+      fileUrl: "",
+    },
   ]);
 
   const addRow = () =>
@@ -1018,55 +1026,97 @@ function CreateWeekModal({ onClose, onSave }) {
       ...r,
       {
         id: Date.now(),
-        type: "text",
         title: "",
+        includeText: false,
         text: "",
+        includeVideo: false,
         videoUrl: "",
+        includeFile: false,
         file: null,
+        fileUrl: "",
       },
     ]);
+
   const removeRow = (id) => setRows((r) => r.filter((x) => x.id !== id));
   const updateRow = (id, patch) =>
     setRows((r) => r.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+
+  // helper bikin 1 composite resource ke /api/weeks/:weekId/resources
+  async function createCompositeResource(weekId, row) {
+    const fd = new FormData();
+    fd.append("type", "composite");
+    fd.append("title", row.title || "");
+    if (row.includeText) fd.append("text", row.text || "");
+    if (row.includeVideo) fd.append("video_url", row.videoUrl || "");
+    if (row.includeFile && row.file) fd.append("file", row.file);
+    if (row.includeFile) fd.append("file_url", row.fileUrl || "");
+
+    const r = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      body: fd,
+    });
+    if (!r.ok) throw new Error(`Create resource failed (${r.status})`);
+    const j = await r.json();
+    const res = j.resource || j;
+
+    return {
+      id: res.id,
+      week: Number(week),
+      weekId,
+      type: res.type || "composite",
+      title: res.title || row.title || "",
+      text: res.text ?? (row.includeText ? row.text : null),
+      videoUrl: res.video_url ?? (row.includeVideo ? row.videoUrl : null),
+      fileUrl: res.file_url ?? (row.includeFile ? row.fileUrl || null : null),
+    };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!week) return;
 
-    const fd = new FormData();
-    fd.append("week_number", week);
-    rows.forEach((r, idx) => {
-      fd.append(`resources[${idx}][type]`, r.type);
-      fd.append(`resources[${idx}][title]`, r.title || "");
-      if (r.type === "text") fd.append(`resources[${idx}][text]`, r.text || "");
-      if (r.type === "video")
-        fd.append(`resources[${idx}][video_url]`, r.videoUrl || "");
-      if (r.type === "file" && r.file)
-        fd.append(`resources[${idx}][file]`, r.file);
-    });
+    // validasi: tiap baris harus memilih minimal 1 include
+    const invalid = rows.some(
+      (r) => !r.includeText && !r.includeVideo && !r.includeFile
+    );
+    if (invalid) {
+      alert("Minimal pilih salah satu: Text / Video / File pada setiap baris.");
+      return;
+    }
 
     try {
       setSaving(true);
+
+      // 1) buat week dulu (tanpa resources)
+      const fd = new FormData();
+      fd.append("week_number", week);
       const res = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      if (!res.ok) throw new Error(`Create week failed (${res.status})`);
       const json = await res.json();
 
-      const createdItems = (json.resources || []).map((r) => ({
-        id: r.id,
-        week: json.week.week_number,
-        weekId: json.week.id,
-        type: r.type,
-        title: r.title,
-        text: r.text,
-        videoUrl: r.video_url,
-        fileUrl: r.file_url,
-      }));
+      const weekId = json?.week?.id ?? json?.id ?? json?.week_id;
+      const weekNumber =
+        json?.week?.week_number ?? json?.week_number ?? Number(week);
 
-      onSave(createdItems);
+      if (!weekId) throw new Error("Week id tidak ditemukan dari respons.");
+
+      // 2) buat semua composite resources paralel
+      const created = await Promise.all(
+        rows.map((row) => createCompositeResource(weekId, row))
+      );
+
+      // 3) normalisasi & kirim balik ke parent (untuk update state + cache)
+      const items = created.map((it) => ({
+        ...it,
+        week: weekNumber,
+        weekId,
+      }));
+      onSave(items);
     } catch (err) {
       alert("Failed to save: " + (err?.message || "Unknown error"));
     } finally {
@@ -1109,52 +1159,77 @@ function CreateWeekModal({ onClose, onSave }) {
                       marginBottom: 4,
                     }}
                   >
-                    Material Option
+                    Title
+                  </label>
+                  <input
+                    className="input"
+                    value={r.title}
+                    onChange={(e) => updateRow(r.id, { title: e.target.value })}
+                  />
+
+                  <div style={{ height: 8 }} />
+
+                  <label
+                    style={{
+                      fontWeight: 600,
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Include:
                   </label>
                   <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
                   >
-                    <select
-                      className="select"
-                      value={r.type}
-                      onChange={(e) =>
-                        updateRow(r.id, { type: e.target.value })
-                      }
-                    >
-                      <option value="file">File (PDF/PPT/DOC)</option>
-                      <option value="video">Video (URL)</option>
-                      <option value="text">Text</option>
-                    </select>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={r.includeText}
+                        onChange={(e) =>
+                          updateRow(r.id, { includeText: e.target.checked })
+                        }
+                      />{" "}
+                      Text
+                    </label>
+
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={r.includeVideo}
+                        onChange={(e) =>
+                          updateRow(r.id, { includeVideo: e.target.checked })
+                        }
+                      />{" "}
+                      Video (URL)
+                    </label>
+
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={r.includeFile}
+                        onChange={(e) =>
+                          updateRow(r.id, { includeFile: e.target.checked })
+                        }
+                      />{" "}
+                      File (upload/URL)
+                    </label>
 
                     <button
                       type="button"
                       className="btn"
                       onClick={() => removeRow(r.id)}
+                      style={{ marginLeft: "auto" }}
                     >
                       <Trash2 size={16} /> Remove
                     </button>
                   </div>
 
-                  <div style={{ marginTop: 8 }}>
-                    <label
-                      style={{
-                        fontWeight: 600,
-                        display: "block",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Title
-                    </label>
-                    <input
-                      className="input"
-                      value={r.title}
-                      onChange={(e) =>
-                        updateRow(r.id, { title: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {r.type === "file" && (
+                  {r.includeText && (
                     <div style={{ marginTop: 8 }}>
                       <label
                         style={{
@@ -1163,20 +1238,19 @@ function CreateWeekModal({ onClose, onSave }) {
                           marginBottom: 4,
                         }}
                       >
-                        Upload file
+                        Content
                       </label>
-                      <input
-                        className="input"
-                        type="file"
-                        accept=".pdf,.ppt,.pptx,.doc,.docx"
+                      <textarea
+                        className="textarea"
+                        value={r.text}
                         onChange={(e) =>
-                          updateRow(r.id, { file: e.target.files?.[0] || null })
+                          updateRow(r.id, { text: e.target.value })
                         }
                       />
                     </div>
                   )}
 
-                  {r.type === "video" && (
+                  {r.includeVideo && (
                     <div style={{ marginTop: 8 }}>
                       <label
                         style={{
@@ -1198,7 +1272,7 @@ function CreateWeekModal({ onClose, onSave }) {
                     </div>
                   )}
 
-                  {r.type === "text" && (
+                  {r.includeFile && (
                     <div style={{ marginTop: 8 }}>
                       <label
                         style={{
@@ -1207,15 +1281,28 @@ function CreateWeekModal({ onClose, onSave }) {
                           marginBottom: 4,
                         }}
                       >
-                        Content
+                        File (upload atau URL)
                       </label>
-                      <textarea
-                        className="textarea"
-                        value={r.text}
+                      <input
+                        className="input"
+                        type="file"
+                        accept=".pdf,.ppt,.pptx,.doc,.docx"
                         onChange={(e) =>
-                          updateRow(r.id, { text: e.target.value })
+                          updateRow(r.id, { file: e.target.files?.[0] || null })
                         }
                       />
+                      <div style={{ height: 8 }} />
+                      <input
+                        className="input"
+                        placeholder="Or File URL"
+                        value={r.fileUrl}
+                        onChange={(e) =>
+                          updateRow(r.id, { fileUrl: e.target.value })
+                        }
+                      />
+                      <div className="cmt-meta" style={{ marginTop: 6 }}>
+                        Gunakan salah satu: upload file atau isi URL.
+                      </div>
                     </div>
                   )}
                 </div>

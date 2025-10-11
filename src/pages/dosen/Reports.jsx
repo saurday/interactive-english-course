@@ -1,16 +1,18 @@
 // src/pages/lecture/Reports.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
-  Settings,
+  SettingsIcon,
   LogOut,
   Menu,
   Users2,
   BookOpenCheck,
+  BookOpen,
+  BarChart2,
 } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const STUDENTS_URL = (cid) => `${BASE_URL}/api/kelas/${cid}/students`;
 const REPORT_URL = (cid, sid) =>
   `${BASE_URL}/api/kelas/${cid}/reports?student_id=${sid}`;
@@ -222,14 +224,18 @@ export default function Reports() {
   const sidebarMenu = [
     { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
     {
-      label: "Reports",
-      icon: <BookOpenCheck size={18} />,
-      to: "/lecture/reports",
+      label: "CEFR Modules",
+      icon: <BookOpen size={18} />,
+      to: "/lecture/cefr",
     },
-    { label: "Settings", icon: <Settings size={18} />, to: "/lecture" },
-    { label: "Logout", icon: <LogOut size={18} />, to: "/" },
+    { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
+    {
+      label: "Settings",
+      icon: <SettingsIcon size={18} />,
+      to: "/lecture/settings",
+    },
+    { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
   ];
-
   // meta viewport
   useEffect(() => {
     try {
@@ -345,12 +351,10 @@ body{
   width:240px; background:#fff; border-right:1px solid #e5e7eb; padding:16px;
   position:sticky; top:0; height:100vh; z-index:950;
 }
-.menu-item{
-  display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px;
-  color:#4a5568; font-weight:600; cursor:pointer; text-decoration:none; font-size:16px;
-}
-.menu-item:hover{ background:#f3f0ff; color:var(--primary); }
-button.menu-item{ background:transparent; border:0; width:100%; text-align:left; }
+.menu-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#475569; font-weight:600; text-decoration:none; margin-bottom:6px; font-size:14px}
+.menu-item:hover{ background:#f3f0ff; color:var(--primary) }
+.menu-item.active{ background:#f3f0ff; color:var(--primary) }
+button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
 
 .content{ flex:1; padding:24px; max-width:1400px; margin:0 auto; width:100%; }
 .breadcrumb{ display:flex; align-items:center; gap:8px; color:#475569; font-weight:600; margin-bottom:12px; }
@@ -407,27 +411,29 @@ thead th{ background:#fafafa; border-bottom:1px solid #e5e7eb; color:#334155; fo
         {/* Sidebar */}
         <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
           <h3 style={{ margin: 0, marginBottom: 12 }}>Lecturer</h3>
-          {sidebarMenu.map(({ label, icon, to }) =>
-            label === "Logout" ? (
+          {sidebarMenu.map(({ label, icon, to, action }) =>
+            action === "logout" ? (
               <button
                 key={label}
                 type="button"
                 className="menu-item"
                 onClick={handleLogout}
               >
-                {icon}
-                {label}
+                {icon} {label}
               </button>
             ) : (
-              <Link
+              <NavLink
                 key={label}
                 to={to}
-                className="menu-item"
+                // hanya Dashboard yang exact
+                end={to === "/lecture"}
+                className={({ isActive }) =>
+                  `menu-item ${isActive ? "active" : ""}`
+                }
                 onClick={() => setIsSidebarOpen(false)}
               >
-                {icon}
-                {label}
-              </Link>
+                {icon} {label}
+              </NavLink>
             )
           )}
         </aside>

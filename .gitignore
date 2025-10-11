@@ -7,42 +7,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies & build outputs
-node_modules/
-dist/
-dist-ssr/
-
-# Cache/artifacts
-.cache/
-.eslintcache
-.parcel-cache/
-.turbo/
-*.tsbuildinfo
+node_modules
+dist
+dist-ssr
 *.local
 
-# Test coverage (jika pakai test runner)
-coverage/
-
-# OS / editor
-.DS_Store
-Thumbs.db
-.idea/
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.idea
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Netlify CLI (jika pernah menjalankan netlify dev)
-.netlify/
-
-# Env files (jangan commit rahasia)
-.env
-.env.*.local
-# tapi tetap track contoh
-!.env.example
-
-# Optional: keluaran alat build CSS (kalau file ini di-generate, bukan ditulis manual)
-# public/output.css

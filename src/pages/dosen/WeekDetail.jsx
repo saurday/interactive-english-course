@@ -8,11 +8,12 @@ import {
   Pencil,
   Save,
   X,
-  Menu, // <-- tambahkan
+  Menu,
+  Maximize2,
 } from "lucide-react";
 
 /* ================== Constants & Keys ================== */
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const resKey = (classId) => `resources:${classId}`;
 const cmtKey = (classId, week) => `comments:${classId}:${week}`;
 
@@ -142,59 +143,87 @@ function toYouTubeEmbed(raw) {
 const buildEmbedUrl = (url) =>
   !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
-// ==== File embed helpers ====
-function officeViewer(url) {
-  return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-    url
-  )}`;
-}
-function gview(url) {
-  return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(
-    url
-  )}`;
-}
-
 // Normalisasi URL & tentukan cara tampilkan
 function prepareEmbedSrc(rawUrl) {
   const url = String(rawUrl || "");
-  if (!url) return { type: "none", src: "" };
+  if (!url) return { type: "none", src: "", open: "" };
 
-  // Google Drive: ubah /view ke /preview
-  if (url.includes("drive.google.com")) {
-    return { type: "iframe", src: url.replace(/\/view(\?.*)?$/, "/preview") };
+  // --- Google Slides ---
+  if (url.includes("docs.google.com/presentation")) {
+    let src = url;
+
+    // Bila masih /edit atau /present -> ubah ke /embed
+    if (/(\/edit|\/present)/.test(src)) {
+      src = src.replace(
+        /\/(edit|present).*$/,
+        "/embed?start=false&loop=false&delayms=3000"
+      );
+    }
+
+    // Bila /pub? => biarkan, atau konversi ke /embed? (keduanya valid)
+    if (/\/pub(\?|$)/.test(src)) {
+      // opsi: gunakan embed supaya konsisten
+      src = src.replace(/\/pub(\?|$)/, "/embed?");
+      if (!src.includes("?")) src += "start=false&loop=false&delayms=3000";
+    }
+
+    return { type: "iframe", src, open: url };
   }
 
-  // Ambil ekstensi
+  // --- Google Docs ---
+  if (url.includes("docs.google.com/document")) {
+    // /edit -> /pub?embedded=true (perlu Publish to the web)
+    const src = url.replace(/\/edit.*$/, "/pub?embedded=true");
+    return { type: "iframe", src, open: url };
+  }
+
+  // --- Google Sheets ---
+  if (url.includes("docs.google.com/spreadsheets")) {
+    // /edit -> /pubhtml?widget=true&headers=false
+    const src = url.replace(/\/edit.*$/, "/pubhtml?widget=true&headers=false");
+    return { type: "iframe", src, open: url };
+  }
+
+  // --- Google Forms ---
+  if (url.includes("docs.google.com/forms")) {
+    const src = url.replace(/\/viewform.*$/, "/viewform?embedded=true");
+    return { type: "iframe", src, open: url };
+  }
+
+  // --- Google Drive file viewer ---
+  if (url.includes("drive.google.com")) {
+    // /view -> /preview untuk video/pdf/images; share harus Anyone with link (Viewer)
+    const src = url.replace(/\/view(\?.*)?$/, "/preview");
+    return { type: "iframe", src, open: url };
+  }
+
+  // --- Ekstensi file langsung ---
   const clean = url.split("#")[0];
   const path = clean.split("?")[0];
   const ext = (path.split(".").pop() || "").toLowerCase();
 
-  // Gambar
-  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext)) {
-    return { type: "image", src: url };
-  }
-  // Video
-  if (["mp4", "webm", "ogg", "m3u8"].includes(ext)) {
-    return { type: "video", src: url };
-  }
-  // Audio
-  if (["mp3", "wav", "oga", "ogg"].includes(ext)) {
-    return { type: "audio", src: url };
-  }
-  // PDF
-  if (ext === "pdf") {
-    return { type: "iframe", src: url };
-  }
-  // Dokumen Office
+  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext))
+    return { type: "image", src: url, open: url };
+  if (["mp4", "webm", "ogg", "m3u8"].includes(ext))
+    return { type: "video", src: url, open: url };
+  if (["mp3", "wav", "oga", "ogg"].includes(ext))
+    return { type: "audio", src: url, open: url };
+  if (ext === "pdf") return { type: "iframe", src: url, open: url };
   if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
-    return { type: "iframe", src: officeViewer(url) };
+    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+      url
+    )}`;
+    return { type: "iframe", src: office, open: url };
   }
-  // Fallback coba Google Viewer
-  return { type: "iframe", src: gview(url) };
+
+  // --- Situs umum ---
+  // Banyak situs mengizinkan embed, sebagian menolak (akan muncul refused to connect).
+  // Kita tetap coba tampilkan, dan sediakan tombol "Open original".
+  return { type: "iframe", src: url, open: url };
 }
 
 function FileViewer({ url, title = "File" }) {
-  const { type, src } = React.useMemo(() => prepareEmbedSrc(url), [url]);
+  const { type, src, open } = React.useMemo(() => prepareEmbedSrc(url), [url]);
 
   if (!url) return <div className="muted">No file URL.</div>;
 
@@ -217,15 +246,30 @@ function FileViewer({ url, title = "File" }) {
   }
   if (type === "iframe") {
     return (
-      <iframe
-        title={title}
-        src={src}
-        className="file-frame"
-        style={{ width: "100%", height: "70vh", border: 0, borderRadius: 12 }}
-        allow="fullscreen"
-      />
+      <div>
+        <iframe
+          title={title}
+          src={src}
+          className="file-frame"
+          style={{ width: "100%", height: "70vh", border: 0, borderRadius: 12 }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; web-share"
+          allowFullScreen
+        />
+        <div style={{ marginTop: 8 }}>
+          <a
+            href={open || src}
+            target="_blank"
+            rel="noreferrer"
+            className="btn"
+            title="Open original"
+          >
+            Open original
+          </a>
+        </div>
+      </div>
     );
   }
+
   return (
     <div>
       <div className="muted" style={{ marginBottom: 8 }}>
@@ -1085,8 +1129,11 @@ export default function WeekDetail() {
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
 
-  // di dalam WeekDetail()
   const [sideOpen, setSideOpen] = useState(false);
+
+  const [fs, setFs] = useState({ open: false, src: "", title: "" });
+  // const openFS = (src, title="Viewer") => setFs({ open:true, src, title });
+  const closeFS = () => setFs({ open: false, src: "", title: "" });
 
   const weekIdForApi = useMemo(
     () => items.find((x) => Number(x.week) === Number(wk))?.weekId || null,
@@ -1479,7 +1526,38 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
 .idx{ width:22px; text-align:right; opacity:.6; }
 
 .viewer{ margin-top:8px; }
-.viewer iframe{ width:100%; height: clamp(380px, 45vw, 640px); border:0; border-radius:12px; }
+
+.viewer iframe{ width:100%; height: min(72svh, 700px); border:0; border-radius:12px; }
+
+
+.expand-btn{
+  position:absolute; right:10px; top:10px;
+  display:inline-flex; align-items:center; gap:6px;
+  border:1px solid rgba(255,255,255,.35);
+  background: rgba(17,24,39,.75); color:#fff;
+  padding:8px 10px; border-radius:10px; cursor:pointer;
+  backdrop-filter: blur(2px);
+}
+.expand-btn:hover{ background: rgba(17,24,39,.9); }
+
+/* fullscreen overlay */
+.fs-wrap{
+  position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.9);
+  display:grid; place-items:center;
+  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+}
+.fs-inner{ width:100vw; height:100svh; }
+.fs-inner iframe{ width:100%; height:100%; border:0; }
+.fs-close{
+  position:fixed; top: max(10px, env(safe-area-inset-top, 10px));
+  right:max(10px, env(safe-area-inset-right, 10px));
+  border:0; background:#fff; color:#111827; font-weight:800; border-radius:10px; padding:8px 10px; cursor:pointer;
+}
+
+/* mobile tweak: biar lebih tinggi */
+@media (max-width:640px){
+  .viewer iframe, .file-frame{ height: 86svh; }
+}
 
 .toolbar, .left-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
 .inline-btn{ border:1px solid #e5e7eb; background:#fff; color:#1f2937; font-weight:700; cursor:pointer; padding:8px 12px; border-radius:10px; display:inline-flex; align-items:center; gap:8px; }
@@ -1583,12 +1661,10 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
   return (
     <>
       <style>{styles}</style>
-
       {/* overlay untuk drawer */}
       {sideOpen && (
         <div className="backdrop show" onClick={() => setSideOpen(false)} />
       )}
-
       <div className="week-detail-page">
         <div className="wrap">
           {/* Left: steps / add actions */}
@@ -1803,7 +1879,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
             ) : current ? (
               <div className="viewer">
                 <h1 className="title">
-                  {`Step ${active + 1}: `}
+                  {` ${active + 1}. `}
                   {current.title || capitalize(current.type)}
                 </h1>
 
@@ -2127,7 +2203,6 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
           </section>
         </div>
       </div>
-
       {/* Modal Edit/Add */}
       <EditMaterialModal
         open={showEdit}
@@ -2135,7 +2210,6 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
         onClose={() => setShowEdit(false)}
         onSave={saveMaterial}
       />
-
       {/* Overlay loading */}
       {overlay && (
         <div
@@ -2160,7 +2234,22 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
           </div>
         </div>
       )}
-
+      + {/* Fullscreen overlay */}
+      {fs.open && (
+        <div className="fs-wrap" onClick={closeFS}>
+          <div className="fs-inner" onClick={(e) => e.stopPropagation()}>
+            <button className="fs-close" onClick={closeFS}>
+              <X size={16} /> Close
+            </button>
+            <iframe
+              title={fs.title}
+              src={fs.src}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
       {/* Toast center screen */}
       {toast.open && (
         <div

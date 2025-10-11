@@ -3,8 +3,8 @@ import React from "react";
 const Footer = () => {
   return (
     <footer style={styles.footer}>
-      <h4 className="font-inter-extra-bold" style={styles.title}>Interactive English Course</h4>
-      <p className="font-inter-regular"style={styles.copyright}>&copy; 2025 Interactive English Course – All Rights Reserved</p>
+      <h4 className="font-inter-extra-bold" style={styles.title}>LEXENT</h4>
+      <p className="font-inter-regular"style={styles.copyright}>&copy; 2025 LEXENT – All Rights Reserved</p>
       <p className="font-poppins-regular"style={styles.developer}>Developed by Universitas Trunojoyo Madura</p>
     </footer>
   );

@@ -1,32 +1,31 @@
-
+// vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite"; // jika pakai Tailwind plugin Vite
 import path from "path";
 import { fileURLToPath } from "url";
-import tailwindcss from "@tailwindcss/vite"; // ✅ tambahkan plugin Tailwind
 
-// karena __dirname tidak tersedia di ESM
+// __dirname untuk ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(), // ✅ aktifkan Tailwind di Vite
+    tailwindcss(), // aktifkan jika paket @tailwindcss/vite terpasang
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "src"),
     },
   },
-    server: {
+  server: {
     proxy: {
       "/api": {
-        target: "https://laravel-interactive-english-course-production.up.railway.app", // ganti sesuai backend
+        target: "http://localhost:8000", // URL backend dev
         changeOrigin: true,
+        // rewrite: (p) => p, // biarkan /api tetap /api (opsional)
       },
     },
   },
 });
-
-

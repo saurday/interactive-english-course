@@ -45,31 +45,63 @@ const Navbar = () => {
 
   return (
     <>
-      <style>{`
-        .nav-root { display:flex; align-items:center; gap:16px; padding:10px 20px; box-shadow:0 2px 5px rgba(0,0,0,.1); background:#fff; position:relative; z-index:1010; }
-        .brand { font-weight:800; font-size:18px; white-space:nowrap; }
-        .nav-left, .nav-right { display:flex; align-items:center; gap:12px; margin:0; padding:0; list-style:none; }
-        .spacer { flex:1; }
-        .mobile-toggle { display:none; margin-left:8px; border:0; background:transparent; padding:8px; border-radius:10px; cursor:pointer; }
-        .mobile-toggle:hover{ background:#f3f4f6; }
+    <style>{`
+  .nav-root {
+    display:flex; align-items:center; gap:16px;
+    padding:8px 24px;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+    background:#fff;
+    position:relative; z-index:1010;
+  }
 
-        /* Backdrop & panel muncul hanya saat open (dirender kondisional) */
-        .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:2000; }
-        .panel{ position:fixed; left:0; right:0; top:0; z-index:2001; }
-        .panel-card{ margin:10px; border-radius:14px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 20px 60px rgba(0,0,0,.20); overflow:hidden; }
-        .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #eef2f7; font-weight:800; }
-        .panel-list{ display:grid; gap:10px; padding:12px; }
-        .mobile-item{ display:block; padding:12px; border-radius:10px; color:#111827; text-decoration:none; border:1px solid #eef2f7; }
-        .mobile-row{ display:flex; gap:10px; }
+  /* Brand lebih halus & modern */
+  .brand {
+    font-weight:700;
+    font-size:16px;              /* lebih kecil dari 18px */
+    letter-spacing:0.3px;
+    color:#8b5cf6;               /* ungu lembut senada button */
+    white-space:nowrap;
+    cursor:pointer;
+    transition:color .3s ease, transform .2s ease;
+  }
+  .brand:hover {
+    color:#7c3aed;
+    transform:translateY(-1px);
+  }
 
-        @media (max-width: 760px){
-          .nav-left, .nav-right { display:none; }
-          .mobile-toggle { display:inline-flex; }
-        }
-      `}</style>
+  .nav-left, .nav-right {
+    display:flex; align-items:center; gap:12px;
+    margin:0; padding:0; list-style:none;
+  }
+
+  .spacer { flex:1; }
+
+  .mobile-toggle {
+    display:none; margin-left:8px; border:0;
+    background:transparent; padding:8px;
+    border-radius:10px; cursor:pointer;
+  }
+  .mobile-toggle:hover{ background:#f3f4f6; }
+
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:2000; }
+  .panel{ position:fixed; left:0; right:0; top:0; z-index:2001; }
+  .panel-card{ margin:10px; border-radius:14px; background:#fff; border:1px solid #e5e7eb;
+    box-shadow:0 20px 60px rgba(0,0,0,.20); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; border-bottom:1px solid #eef2f7; font-weight:700; color:#374151; }
+  .panel-list{ display:grid; gap:10px; padding:12px; }
+  .mobile-item{ display:block; padding:12px; border-radius:10px; color:#111827; text-decoration:none; border:1px solid #eef2f7; }
+  .mobile-row{ display:flex; gap:10px; }
+
+  @media (max-width:760px){
+    .nav-left, .nav-right { display:none; }
+    .mobile-toggle { display:inline-flex; }
+  }
+`}</style>
+
 
       <nav className="nav-root">
-        <div className="brand">Interactive English Course</div>
+        <div className="brand">LEXENT</div>
 
         {/* kiri (desktop) */}
         <ul className="nav-left">

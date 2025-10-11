@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CACHE_KEY = "classes_cache_mhs";
 const getUserId = () => {
   try {
@@ -26,10 +26,14 @@ const getUserId = () => {
 const progKey = (classId, uid = getUserId()) => `u:${uid}:progress:${classId}`;
 
 const sidebarMenu = [
-  { label: "Dashboard", icon: <Home size={20} />, to: "/student" },
-    { label: "CEFR Modules", icon: <BookOpenText size={20} />, to: "/student/cefr" },
-  { label: "Settings", icon: <Settings size={20} />, to: "/student/settings" },
-  { label: "Logout", icon: <LogOut size={20} /> },
+  { label: "Dashboard", icon: <Home size={18} />, to: "/student" },
+  {
+    label: "CEFR Modules",
+    icon: <BookOpenText size={18} />,
+    to: "/student/cefr",
+  },
+  { label: "Settings", icon: <Settings size={18} />, to: "/student/settings" },
+  { label: "Logout", icon: <LogOut size={18} /> },
   // { label: "Lesson", icon: <BookOpenText size={20} /> },
   // { label: "Task", icon: <CalendarCheck2 size={20} /> },
 ];
@@ -280,19 +284,27 @@ export default function MahasiswaDashboard() {
       </style>
 
       <style>{`
-:root { --sbw: 240px; --violet:#6b46c1; --violet-700:#553c9a; }
+
+ :root { 
+  --sbw: 240px; 
+  --violet:#6b46c1; 
+  --violet-700:#553c9a; 
+  --primary: var(--violet);   /* supaya rule :hover yang pakai --primary hidup */
+}
 body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#fbfbfb; }
 
 /* ====== Layout ====== */
 /* container yang punya kedua class: mhs-dash + container */
-.mhs-dash.container{
-  display:flex;            /* penting: tata letak dua kolom */
-  min-height:100vh;
-  width:100%;
+.mhs-dash{
+   display:flex;
+   min-height:100vh;
+   width:100%;
+   padding-left: 0 !important;
+   margin-left: 0 !important;
 }
 
 /* content override agar tidak kena max-width global halaman lain */
-.mhs-dash.container .content{
+.mhs-dash .content{
   flex: 1 1 auto;
   width: 100%;
   max-width: none !important;
@@ -301,7 +313,7 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
 }
 
 /* grid fleksibel */
-.mhs-dash.container .grid{
+.mhs-dash .grid{
   display:grid;
   gap:16px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -325,20 +337,59 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 20px clamp(12px, 2vw, 24px);  /* padding responsif */
+
+  /* sisi kiri/kanan + atas normal */
+  padding-inline: clamp(14px, 4vw, 28px);
+  padding-top: clamp(12px, 2.6vw, 24px);
+
+  padding-bottom: max(clamp(28px, 6vh, 96px), env(safe-area-inset-bottom));
 }
-.title { font-size: clamp(20px, 1.7vw + 6px, 28px); font-weight:800; color:#1f2937; margin:0 0 12px; }
+
+
+.title { font-size: clamp(18px, 2.2vw + 6px, 20px); font-weight:800; color:#1f2937; margin:0 0 12px; }
 .muted { color:#64748b; }
 
 /* ====== Sidebar ====== */
-.sidebar h3 { font-weight:800; margin:0 0 12px; }
-.menu-item, .button.menu-item{
-  display:flex; align-items:center; gap:8px;
-  padding:10px; cursor:pointer; border-radius:10px; margin-bottom:10px;
-  color:#4a5568; font-weight:600; font-size:16px;
+.sidebar {
+  width: var(--sbw);
+  background:#fff;
+  border-right:1px solid #e2e8f0;
+  padding:16px;
+  position:sticky;
+  top:0;
+  height:100vh;
 }
-.menu-item.active, .menu-item:hover{ background:#f3f4f6; }
-button.menu-item{ background:transparent; border:0; appearance:none; font:inherit; color:inherit; text-align:left; width:100%; }
+
+.sidebar h3 { font-weight:800; margin:0 0 12px; }
+
+.menu-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  color:#475569;
+  font-weight:600;
+  text-decoration:none;
+  margin-bottom:6px;
+  font-size:14px;
+  cursor:pointer;
+  transition: background .15s ease, color .15s ease;
+  user-select:none;
+}
+
+.menu-item:hover,
+.menu-item.active{
+  background:#f3f0ff;
+  color:var(--primary); /* --primary sudah kamu set ke --violet */
+}
+
+button.menu-item{
+  background:transparent;
+  border:0;
+  width:100%;
+  text-align:left;
+}
 
 /* ====== Mobile top bar ====== */
 .mobile-top{ display:none; align-items:center; justify-content:space-between; gap:10px; margin:4px 0 12px; }
@@ -352,13 +403,19 @@ button.menu-item{ background:transparent; border:0; appearance:none; font:inheri
 .backdrop.show{ display:block; }
 
 @media (max-width:1100px){
+
   .sidebar{
     position: fixed; left:0; top:0; bottom:0; height:auto;
     width: 86vw; max-width: 320px; transform: translateX(-100%);
     transition: transform .25s ease; z-index: 1001; overflow:auto;
   }
   .sidebar.open{ transform: translateX(0); }
-  .content{ padding:12px; max-width:100%; }
+.content{
+  max-width:100%;
+  padding-inline: 12px;
+  padding-top: 12px;
+  padding-bottom: max(56px, env(safe-area-inset-bottom));
+}
   .mobile-top{ display:flex; }
   .hamburger{ display:inline-flex; }
 }
@@ -378,8 +435,8 @@ button.menu-item{ background:transparent; border:0; appearance:none; font:inheri
   background: radial-gradient(1200px 400px at 80% -20%, rgba(255,255,255,.25), transparent 60%), var(--violet);
   color:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 28px rgba(0,0,0,.15);
 }
-.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 24px); font-weight:800; }
-.hero p{ margin:0 0 14px; opacity:.98; }
+.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 10px); font-weight:800; }
+.hero p{ margin:0 0 10px; opacity:.98; }
 
 /* ====== Weeks grid ====== */
 /* ganti semua rule .grid + media query-nya dengan ini */
@@ -410,10 +467,10 @@ button.menu-item{ background:transparent; border:0; appearance:none; font:inheri
         <div className="backdrop show" onClick={() => setSideOpen(false)} />
       )}
 
-      <div className="container mhs-dash">
+      <div className="mhs-dash">
         {/* Sidebar */}
         <aside className={`sidebar ${sideOpen ? "open" : ""}`}>
-          <h3>Interactive English Course</h3>
+          <h3>LEXENT</h3>
 
           {sidebarMenu.map(({ label, icon, to }) =>
             label === "Logout" ? (
@@ -434,8 +491,6 @@ button.menu-item{ background:transparent; border:0; appearance:none; font:inheri
               </div>
             )
           )}
-
-      
         </aside>
 
         {/* Content */}
@@ -668,3 +723,4 @@ button.menu-item{ background:transparent; border:0; appearance:none; font:inheri
     </>
   );
 }
+

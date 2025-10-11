@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login, useDecodeToken } from "../_services/auth";
 import { routeByRole } from "../utils/auth";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -22,7 +23,6 @@ export default function Login() {
 
   const togglePasswordVisibility = () => setShowPassword((s) => !s);
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -82,19 +82,15 @@ export default function Login() {
             <form onSubmit={handleSubmit} style={styles.form}>
               {/* Email */}
               <div style={styles.inputGroup}>
-                <label
-                  className="text-sm font-poppins-semibold"
-                  style={styles.label}
-                  htmlFor="email"
-                >
+                <label htmlFor="email" style={styles.label}>
                   Email address
                 </label>
                 <div style={styles.inputWrapper}>
-                  <span style={styles.leftIcon} aria-hidden>
-                    📧
-                  </span>
+                  <Mail
+                    size={16}
+                    style={{ color: "#8b5cf6", marginLeft: 12 }}
+                  />
                   <input
-                    className="text-sm font-poppins-regular"
                     id="email"
                     type="email"
                     placeholder="Enter your email"
@@ -108,19 +104,15 @@ export default function Login() {
 
               {/* Password */}
               <div style={styles.inputGroup}>
-                <label
-                  className="text-sm font-poppins-semibold"
-                  htmlFor="password"
-                  style={styles.label}
-                >
+                <label htmlFor="password" style={styles.label}>
                   Password
                 </label>
                 <div style={styles.inputWrapper}>
-                  <span style={styles.leftIcon} aria-hidden>
-                    🔒
-                  </span>
+                  <Lock
+                    size={16}
+                    style={{ color: "#8b5cf6", marginLeft: 12 }}
+                  />
                   <input
-                    className="text-sm font-poppins-regular"
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
@@ -130,15 +122,18 @@ export default function Login() {
                     required
                   />
                   <button
-                    className="btn-inter-bold"
                     type="button"
                     onClick={togglePasswordVisibility}
+                    style={styles.eyeButton}
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
-                    style={styles.eyeButton}
                   >
-                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                    {showPassword ? (
+                      <EyeOff size={16} color="#6b7280" />
+                    ) : (
+                      <Eye size={16} color="#6b7280" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -289,7 +284,7 @@ const styles = {
     border: "none",
     borderRadius: 12,
     padding: "12px 16px",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 700,
     marginBottom: 14,
     boxShadow: "0 6px 18px rgba(139, 92, 246, 0.35)",

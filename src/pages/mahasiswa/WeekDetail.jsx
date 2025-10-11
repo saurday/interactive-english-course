@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronRight, CheckCircle2, Lock, Loader2, Menu } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ===== helper: attempt terakhir quiz =====
 async function fetchLatestAttempt(quizId, token) {

@@ -9,7 +9,7 @@ import {
   Hash,
 } from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /* ---------- Toast sederhana ---------- */
 function Toast({ open, text }) {
@@ -42,10 +42,10 @@ function Toast({ open, text }) {
   );
 }
 
-
 export default function AssignmentBuilder() {
-const { id: classId, week, assignmentId } = useParams();
-  const isEdit = Boolean(assignmentId);  const navigate = useNavigate();
+  const { id: classId, week, assignmentId } = useParams();
+  const isEdit = Boolean(assignmentId);
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
   const [form, setForm] = useState({
@@ -65,98 +65,102 @@ const { id: classId, week, assignmentId } = useParams();
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
- // === LOAD DATA KALAU MODE EDIT ===
- useEffect(() => {
-   if (!isEdit) return;
-   (async () => {
-     try {
-       const r = await fetch(`${BASE_URL}/api/assignments/${assignmentId}`, {
-         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-       });
-       if (!r.ok) throw new Error(`Load assignment failed (${r.status})`);
-       const { assignment } = await r.json();
-       setForm({
-         title: assignment.title || "",
-         instructions: assignment.instructions || "",
-         // untuk input type="datetime-local"
-         due_date: assignment.due_date ? assignment.due_date.slice(0, 16) : "",
-         max_score: assignment.max_score ?? 100,
-         allow_file: !!assignment.allow_file,
-       });
-     } catch (e) {
-       console.error(e);
-       showToast(e.message || "Failed to load");
-     }
-   })();
- }, [isEdit, assignmentId, token]);
+  // === LOAD DATA KALAU MODE EDIT ===
+  useEffect(() => {
+    if (!isEdit) return;
+    (async () => {
+      try {
+        const r = await fetch(`${BASE_URL}/api/assignments/${assignmentId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+        if (!r.ok) throw new Error(`Load assignment failed (${r.status})`);
+        const { assignment } = await r.json();
+        setForm({
+          title: assignment.title || "",
+          instructions: assignment.instructions || "",
+          // untuk input type="datetime-local"
+          due_date: assignment.due_date ? assignment.due_date.slice(0, 16) : "",
+          max_score: assignment.max_score ?? 100,
+          allow_file: !!assignment.allow_file,
+        });
+      } catch (e) {
+        console.error(e);
+        showToast(e.message || "Failed to load");
+      }
+    })();
+  }, [isEdit, assignmentId, token]);
 
-async function getWeekIdByNumber(classId, weekNumber, token) {
-  const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Load weeks failed (${r.status})`);
-  const list = await r.json();
-  const w = (Array.isArray(list) ? list : list.weeks || []).find(
-    (x) => Number(x.week_number ?? x.week) === Number(weekNumber)
-  );
-  return w?.id || null;
-}
-
-const save = async () => {
-  if (!form.title.trim()) return showToast("Title is required");
-
-  try {
-    setSaving(true);
-
-    // 0) pastikan kita punya week_id
-    const weekId = await getWeekIdByNumber(classId, week, token);
-    if (!weekId) throw new Error("Week not found");
-
-    // 1) buat assignment
-    const ra = await fetch(`${BASE_URL}/api/assignments`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        title: form.title,
-        instructions: form.instructions,
-        due_date: form.due_date || null,
-        max_score: Number(form.max_score) || 100,
-        allow_file: !!form.allow_file,
-        kelas_id: classId,
-      }),
-    });
-    if (!ra.ok) throw new Error(`Create assignment failed (${ra.status})`);
-    const aJson = await ra.json();
-    const assignmentId = (aJson.assignment || aJson).id;
-
-    // 2) tempel ke week sebagai course resource (type: assignment)
-    const fd = new FormData();
-    fd.append("type", "assignment");
-    fd.append("title", form.title);
-    fd.append("assignment_id", assignmentId);
-
-    const rr = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
-      method: "POST",
+  async function getWeekIdByNumber(classId, weekNumber, token) {
+    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      body: fd,
     });
-    if (!rr.ok) throw new Error(`Create resource failed (${rr.status})`);
-
-    showToast("Assignment saved!");
-    navigate(`/lecture/classes/${classId}/weeks/${week}`);
-  } catch (e) {
-    console.error(e);
-    showToast(e.message || "Failed to save assignment");
-  } finally {
-    setSaving(false);
+    if (!r.ok) throw new Error(`Load weeks failed (${r.status})`);
+    const list = await r.json();
+    const w = (Array.isArray(list) ? list : list.weeks || []).find(
+      (x) => Number(x.week_number ?? x.week) === Number(weekNumber)
+    );
+    return w?.id || null;
   }
-};
 
-       
+  const save = async () => {
+    if (!form.title.trim()) return showToast("Title is required");
+
+    try {
+      setSaving(true);
+
+      // 0) pastikan kita punya week_id
+      const weekId = await getWeekIdByNumber(classId, week, token);
+      if (!weekId) throw new Error("Week not found");
+
+      // 1) buat assignment
+      const ra = await fetch(`${BASE_URL}/api/assignments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          title: form.title,
+          instructions: form.instructions,
+          due_date: form.due_date || null,
+          max_score: Number(form.max_score) || 100,
+          allow_file: !!form.allow_file,
+          kelas_id: classId,
+        }),
+      });
+      if (!ra.ok) throw new Error(`Create assignment failed (${ra.status})`);
+      const aJson = await ra.json();
+      const assignmentId = (aJson.assignment || aJson).id;
+
+      // 2) tempel ke week sebagai course resource (type: assignment)
+      const fd = new FormData();
+      fd.append("type", "assignment");
+      fd.append("title", form.title);
+      fd.append("assignment_id", assignmentId);
+
+      const rr = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        body: fd,
+      });
+      if (!rr.ok) throw new Error(`Create resource failed (${rr.status})`);
+
+      showToast("Assignment saved!");
+      navigate(`/lecture/classes/${classId}/weeks/${week}`);
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || "Failed to save assignment");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -221,15 +225,45 @@ const save = async () => {
         <div className="wrap">
           {/* ===== Sidebar (info & tips) ===== */}
           <aside className="panel left">
-<div className="side-title">{isEdit ? "Edit Assignment" : "Create Assignment"}</div>            <div className="side-kv"><span className="k">Class</span><span>#{classId}</span></div>
-            <div className="side-kv"><span className="k">Week</span><span>{week}</span></div>
-
-            <hr style={{ border: "none", borderTop: "1px solid #eef2f7", margin: "10px 0" }} />
-            <div className="side-title" style={{ fontSize: 14 }}>Tips</div>
-            <ul style={{ margin: 0, paddingLeft: 18, color: "#64748b", lineHeight: 1.6 }}>
-              <li>Isi <b>Due date</b> jika tugas punya tenggat.</li>
-              <li><b>Max score</b> default 100, bisa diubah.</li>
-              <li>Aktifkan <b>Allow file upload</b> jika siswa harus unggah berkas.</li>
+            <div className="side-title">
+              {isEdit ? "Edit Assignment" : "Create Assignment"}
+            </div>{" "}
+            <div className="side-kv">
+              <span className="k">Class</span>
+              <span>#{classId}</span>
+            </div>
+            <div className="side-kv">
+              <span className="k">Week</span>
+              <span>{week}</span>
+            </div>
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid #eef2f7",
+                margin: "10px 0",
+              }}
+            />
+            <div className="side-title" style={{ fontSize: 14 }}>
+              Tips
+            </div>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 18,
+                color: "#64748b",
+                lineHeight: 1.6,
+              }}
+            >
+              <li>
+                Isi <b>Due date</b> jika tugas punya tenggat.
+              </li>
+              <li>
+                <b>Max score</b> default 100, bisa diubah.
+              </li>
+              <li>
+                Aktifkan <b>Allow file upload</b> jika siswa harus unggah
+                berkas.
+              </li>
             </ul>
           </aside>
 
@@ -241,17 +275,36 @@ const save = async () => {
               <ChevronRight size={16} />
               <Link to={`/lecture/classes/${classId}`}>Class</Link>
               <ChevronRight size={16} />
-              <Link to={`/lecture/classes/${classId}/weeks/${week}`}>Week {week}</Link>
+              <Link to={`/lecture/classes/${classId}/weeks/${week}`}>
+                Week {week}
+              </Link>
               <ChevronRight size={16} />
-<span>{isEdit ? "Edit Assignment" : "Create Assignment"}</span>            </div>
+              <span>
+                {isEdit ? "Edit Assignment" : "Create Assignment"}
+              </span>{" "}
+            </div>
 
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
               <h1 className="title" style={{ marginBottom: 4 }}>
-                {isEdit ? "Edit Assignment" : "Create Assignment"} — <span style={{ color: "#64748b", fontWeight: 700 }}>Week {week}</span>
+                {isEdit ? "Edit Assignment" : "Create Assignment"} —{" "}
+                <span style={{ color: "#64748b", fontWeight: 700 }}>
+                  Week {week}
+                </span>
               </h1>
               <div style={{ display: "flex", gap: 8 }}>
-                <Link to={`/lecture/classes/${classId}/weeks/${week}`} className="btn" style={{ textDecoration: "none" }}>
+                <Link
+                  to={`/lecture/classes/${classId}/weeks/${week}`}
+                  className="btn"
+                  style={{ textDecoration: "none" }}
+                >
                   <ChevronLeft size={16} /> Back to week
                 </Link>
               </div>
@@ -283,7 +336,10 @@ const save = async () => {
                 </div>
 
                 <div className="form-row">
-                  <div className="field" style={{ minWidth: 240, flex: "1 1 240px" }}>
+                  <div
+                    className="field"
+                    style={{ minWidth: 240, flex: "1 1 240px" }}
+                  >
                     <label>Due date</label>
                     <div className="with-icon">
                       <Clock size={16} />
@@ -312,8 +368,22 @@ const save = async () => {
                   </div>
 
                   <label className="field" style={{ minWidth: 200 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Submission</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: "#0f172a",
+                      }}
+                    >
+                      Submission
+                    </span>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={form.allow_file}
@@ -327,9 +397,21 @@ const save = async () => {
               </div>
 
               <div className="bottom-actions">
-                <button className="btn" onClick={() => navigate(-1)}>Cancel</button>
-                <button className="btn btn-primary" onClick={save} disabled={saving}>
-                  {saving ? "Saving…" : (<><SaveIcon size={16} /> Save</>)}
+                <button className="btn" onClick={() => navigate(-1)}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={save}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    "Saving…"
+                  ) : (
+                    <>
+                      <SaveIcon size={16} /> Save
+                    </>
+                  )}
                 </button>
               </div>
             </div>

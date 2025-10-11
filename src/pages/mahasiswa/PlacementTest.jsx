@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const DEFAULT_LIMIT_MIN = 30; // ⬅️ 30 menit
 
 export default function PlacementTest() {
@@ -19,68 +19,69 @@ export default function PlacementTest() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-// load attempt + test
-useEffect(() => {
-  if (!aid) {
-    navigate("/student");
-    return;
-  }
-  let cancelled = false;
-  const ac = new AbortController();
-
-  (async () => {
-    try {
-      const r = await fetch(`${BASE_URL}/api/placement/attempts/${aid}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        signal: ac.signal,
-      });
-
-      if (!r.ok) {
-        // kalau 404/403 baru redirect; selain itu lempar error biasa
-        if (r.status === 404 || r.status === 403) {
-          if (!cancelled) navigate("/student");
-          return;
-        }
-        throw new Error(`HTTP ${r.status}`);
-      }
-
-      const j = await r.json();
-      if (cancelled) return;
-
-      setAttempt(j?.attempt ?? null);
-
-      const title =
-        j?.test?.title || j?.attempt?.test?.title || "Placement Test";
-
-      // pastikan time_limit ikut disimpan
-      const tl = Number(
-        j?.test?.time_limit ?? j?.attempt?.test?.time_limit ?? 0
-      );
-
-      const questions = Array.isArray(j?.test?.questions)
-        ? j.test.questions
-        : Array.isArray(j?.questions)
-        ? j.questions
-        : [];
-
-      setTest({ title, time_limit: tl, questions });
-    } catch (err) {
-      // Abaikan abort dari cleanup/StrictMode
-      if (err?.name === "AbortError" || err?.code === 20) return;
-      console.error("Load placement attempt failed:", err);
-      if (!cancelled) navigate("/student");
-    } finally {
-      if (!cancelled) setLoading(false);
+  // load attempt + test
+  useEffect(() => {
+    if (!aid) {
+      navigate("/student");
+      return;
     }
-  })();
+    let cancelled = false;
+    const ac = new AbortController();
 
-  return () => {
-    cancelled = true;
-    ac.abort();
-  };
-}, [aid, token, navigate]);
+    (async () => {
+      try {
+        const r = await fetch(`${BASE_URL}/api/placement/attempts/${aid}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          signal: ac.signal,
+        });
 
+        if (!r.ok) {
+          // kalau 404/403 baru redirect; selain itu lempar error biasa
+          if (r.status === 404 || r.status === 403) {
+            if (!cancelled) navigate("/student");
+            return;
+          }
+          throw new Error(`HTTP ${r.status}`);
+        }
 
+        const j = await r.json();
+        if (cancelled) return;
+
+        setAttempt(j?.attempt ?? null);
+
+        const title =
+          j?.test?.title || j?.attempt?.test?.title || "Placement Test";
+
+        // pastikan time_limit ikut disimpan
+        const tl = Number(
+          j?.test?.time_limit ?? j?.attempt?.test?.time_limit ?? 0
+        );
+
+        const questions = Array.isArray(j?.test?.questions)
+          ? j.test.questions
+          : Array.isArray(j?.questions)
+          ? j.questions
+          : [];
+
+        setTest({ title, time_limit: tl, questions });
+      } catch (err) {
+        // Abaikan abort dari cleanup/StrictMode
+        if (err?.name === "AbortError" || err?.code === 20) return;
+        console.error("Load placement attempt failed:", err);
+        if (!cancelled) navigate("/student");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [aid, token, navigate]);
 
   // timer (ambil dari test.time_limit kalau diset; fallback 30 menit)
   useEffect(() => {
@@ -152,40 +153,43 @@ useEffect(() => {
 
   // submit & redirect
   const submit = async (auto = false) => {
-  if (submitting) return;
-  setSubmitting(true);
-  try {
-    const r = await fetch(`${BASE_URL}/api/placement/attempts/${aid}/submit`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch(
+        `${BASE_URL}/api/placement/attempts/${aid}/submit`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
+      );
 
-    if (!r.ok) {
-      const msg = await r.text().catch(() => "");
-      if (!auto) alert(msg || `Submit failed (${r.status})`);
-      return;
+      if (!r.ok) {
+        const msg = await r.text().catch(() => "");
+        if (!auto) alert(msg || `Submit failed (${r.status})`);
+        return;
+      }
+
+      const j = await r.json();
+
+      if (auto) alert("Waktu habis. Jawabanmu otomatis terkirim.");
+      // ← arahkan ke halaman review
+      if (j.review_url) {
+        const url = new URL(j.review_url);
+        navigate(url.pathname + url.search);
+      } else {
+        navigate(`/student/placement-review?aid=${aid}`);
+      }
+    } catch (err) {
+      if (!auto) alert("Submit failed. Please try again.");
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
-
-    const j = await r.json();
-
-    if (auto) alert("Waktu habis. Jawabanmu otomatis terkirim.");
-    // ← arahkan ke halaman review
-    if (j.review_url) {
-      const url = new URL(j.review_url);
-      navigate(url.pathname + url.search);
-    } else {
-      navigate(`/student/placement-review?aid=${aid}`);
-    }
-  } catch (err) {
-    if (!auto) alert("Submit failed. Please try again.");
-    console.error(err);
-  } finally {
-    setSubmitting(false);
-  }
-};
-
-    
-  
+  };
 
   return (
     <div className="pt-root">

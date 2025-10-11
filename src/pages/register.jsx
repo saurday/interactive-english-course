@@ -1,7 +1,8 @@
 // src/pages/Register.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API } from "../_api"; // ✅ gunakan API instance
+import axios from "axios";
+import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -43,8 +44,8 @@ export default function Register() {
     setErrorMsg(null);
 
     try {
-      await API.post("/register", {
-        name: formData.fullName, // map ke field 'name' di backend
+      await axios.post("http://127.0.0.1:8000/api/register", {
+        name: formData.fullName, // map ke 'name' backend
         email: formData.email,
         password: formData.password,
         password_confirmation: formData.confirmPassword,
@@ -54,13 +55,16 @@ export default function Register() {
       alert("Registration successful!");
       navigate("/login");
     } catch (err) {
+      // Ambil pesan dari backend jika ada
       const apiErr =
         err?.response?.data?.message ||
         err?.response?.data?.errors?.email ||
         err?.response?.data?.errors?.name ||
         err?.response?.data?.errors?.password;
       setErrorMsg(
-        Array.isArray(apiErr) ? apiErr.join(", ") : apiErr || "Registration failed!"
+        Array.isArray(apiErr)
+          ? apiErr.join(", ")
+          : apiErr || "Registrtion failed!"
       );
     } finally {
       setLoading(false);
@@ -72,16 +76,16 @@ export default function Register() {
     setShowConfirmPassword((s) => !s);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="flex flex-col min-h-screen bg-white">
       {/* PAGE CONTENT */}
       <main style={styles.container}>
         <div style={styles.card}>
           {/* Header */}
           <div style={styles.header}>
-            <h1 className="font-inter-bold text-2xl" style={styles.title}>
+            <h1 className="text-2xl font-inter-bold" style={styles.title}>
               Welcome!
             </h1>
-            <p className="font-inter-regular text-sm" style={styles.subtitle}>
+            <p className="text-sm font-inter-regular" style={styles.subtitle}>
               Create your account and start improving your English
             </p>
           </div>
@@ -95,9 +99,7 @@ export default function Register() {
             <div style={styles.inputGroup}>
               <label style={styles.label}>Full Name</label>
               <div style={styles.inputWrapper}>
-                <span style={styles.icon} aria-hidden>
-                  👤
-                </span>
+                <User size={16} style={{ color: "#8b5cf6", marginLeft: 12 }} />
                 <input
                   type="text"
                   name="fullName"
@@ -114,9 +116,7 @@ export default function Register() {
             <div style={styles.inputGroup}>
               <label style={styles.label}>Email address</label>
               <div style={styles.inputWrapper}>
-                <span style={styles.icon} aria-hidden>
-                  📧
-                </span>
+                <Mail size={18} style={{ color: "#8b5cf6", marginLeft: 12 }} />
                 <input
                   type="email"
                   name="email"
@@ -133,9 +133,7 @@ export default function Register() {
             <div style={styles.inputGroup}>
               <label style={styles.label}>Create Password</label>
               <div style={styles.inputWrapper}>
-                <span style={styles.icon} aria-hidden>
-                  🔒
-                </span>
+                <Lock size={18} style={{ color: "#8b5cf6", marginLeft: 12 }} />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -149,9 +147,12 @@ export default function Register() {
                   type="button"
                   onClick={togglePasswordVisibility}
                   style={styles.eyeButton}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                  {showPassword ? (
+                    <EyeOff size={16} color="#6b7280" />
+                  ) : (
+                    <Eye size={16} color="#6b7280" />
+                  )}
                 </button>
               </div>
             </div>
@@ -160,9 +161,7 @@ export default function Register() {
             <div style={styles.inputGroup}>
               <label style={styles.label}>Confirm Password</label>
               <div style={styles.inputWrapper}>
-                <span style={styles.icon} aria-hidden>
-                  🔒
-                </span>
+                <Lock size={16} style={{ color: "#8b5cf6", marginLeft: 12 }} />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
@@ -176,17 +175,19 @@ export default function Register() {
                   type="button"
                   onClick={toggleConfirmPasswordVisibility}
                   style={styles.eyeButton}
-                  aria-label={
-                    showConfirmPassword ? "Hide confirm password" : "Show confirm password"
-                  }
                 >
-                  {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  {showConfirmPassword ? (
+                    <EyeOff size={16} color="#6b7280" />
+                  ) : (
+                    <Eye size={16} color="#6b7280" />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Submit */}
             <button
+              className="btn-inter-bold"
               type="submit"
               style={{
                 ...styles.registerButton,
@@ -200,8 +201,17 @@ export default function Register() {
 
             {/* Link Login */}
             <div style={styles.loginSection}>
-              <span style={styles.loginText}>Already have an account? </span>
-              <Link to="/login" style={styles.loginLink}>
+              <span
+                className="text-xs font-poppins-small"
+                style={styles.loginText}
+              >
+                Already have an account?{" "}
+              </span>
+              <Link
+                to="/login"
+                className="font-poppins-small"
+                style={styles.loginLink}
+              >
                 Login
               </Link>
             </div>
@@ -212,7 +222,7 @@ export default function Register() {
   );
 }
 
-/* ========== Inline styles untuk tampilan ========== */
+/* ========== Inline styles untuk tampilan sesuai mockup ========== */
 const styles = {
   container: {
     minHeight: "calc(100vh - 200px)",
@@ -231,8 +241,13 @@ const styles = {
     maxWidth: "450px",
     border: "1px solid rgba(0,0,0,0.06)",
   },
-  header: { textAlign: "center", marginBottom: "28px" },
-  title: { fontSize: "28px", fontWeight: 800, color: "#1f2937", margin: "0 0 12px" },
+  header: { textAlign: "center", marginBottom: "20px" },
+  title: {
+    fontSize: "28px",
+    fontWeight: 800,
+    color: "#1f2937",
+    margin: "0 0 5px",
+  },
   subtitle: { fontSize: "14px", color: "#6b7280", margin: 0, lineHeight: 1.5 },
   errorBox: {
     background: "#FEF2F2",
@@ -244,8 +259,14 @@ const styles = {
     marginBottom: 16,
   },
   form: { width: "100%" },
-  inputGroup: { marginBottom: "18px" },
-  label: { display: "block", fontSize: "14px", fontWeight: 700, color: "#374151", marginBottom: 8 },
+  inputGroup: { marginBottom: "10px" },
+  label: {
+    display: "block",
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#374151",
+    marginBottom: 8,
+  },
   inputWrapper: {
     position: "relative",
     display: "flex",
@@ -279,7 +300,7 @@ const styles = {
     border: "none",
     borderRadius: "12px",
     padding: "14px",
-    fontSize: "16px",
+    fontSize: "14px",
     fontWeight: 700,
     marginTop: "6px",
     marginBottom: "16px",
@@ -288,5 +309,10 @@ const styles = {
   },
   loginSection: { textAlign: "center" },
   loginText: { fontSize: "14px", color: "#6b7280" },
-  loginLink: { fontSize: "14px", color: "#8b5cf6", textDecoration: "none", fontWeight: 600 },
+  loginLink: {
+    fontSize: "14px",
+    color: "#8b5cf6",
+    textDecoration: "none",
+    fontWeight: 600,
+  },
 };

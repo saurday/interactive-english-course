@@ -1,9 +1,16 @@
 // src/pages/lecture/CefrLevelList.jsx
 import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Settings, LogOut, Menu, BarChart2 } from "lucide-react";
+import {
+  Home,
+  BookOpen,
+  Settings,
+  LogOut,
+  Menu,
+  BarChart2,
+} from "lucide-react";
 
-const BASE_URL = "https://laravel-interactive-english-course-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture", end: true }, // <-- tambahkan end
@@ -12,7 +19,6 @@ const sidebarMenuDosen = [
   { label: "Settings", icon: <Settings size={18} />, to: "/lecture/settings" },
   { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
 ];
-
 
 const STATIC_CEFR = [
   { code: "A1", name: "Beginner", desc: "Basic user" },
@@ -23,16 +29,24 @@ const STATIC_CEFR = [
   { code: "C2", name: "Proficient", desc: "Proficient user" },
 ];
 
+// hapus "A1 ", "A2 -", dst di depan nama
+function stripCode(name = "", code = "") {
+  if (!name) return name;
+  // contoh yang ditangani: "A1 Beginner", "A1 - Beginner", "A1: Beginner"
+  const re = new RegExp(`^\\s*${code}\\s*[-:]?\\s*`, "i");
+  return name.replace(re, "").trim();
+}
+
 // Coba beberapa endpoint; fallback ke STATIC_CEFR bila gagal/kosong
 async function fetchLevels(token) {
-  const tries = [
-    `${BASE_URL}/api/cefr-levels`,
-    `${BASE_URL}/api/cefr/levels`,
-  ];
+  const tries = [`${BASE_URL}/api/cefr-levels`, `${BASE_URL}/api/cefr/levels`];
   for (const url of tries) {
     try {
       const r = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
       });
       if (!r.ok) continue;
       const j = await r.json();
@@ -40,12 +54,17 @@ async function fetchLevels(token) {
       if (!Array.isArray(arr) || arr.length === 0) continue;
 
       // Normalisasi agar punya {code,name,desc}
-      return arr.map((x) => ({
-        id: x.id,
-        code: x.code || x.level || (typeof x.name === "string" ? x.name.toUpperCase() : ""),
-        name: x.name || x.title || (x.code ? `Level ${x.code}` : "Level"),
-        desc: x.description || x.desc || "",
-      })).filter(x => x.code);
+      return arr
+        .map((x) => ({
+          id: x.id,
+          code:
+            x.code ||
+            x.level ||
+            (typeof x.name === "string" ? x.name.toUpperCase() : ""),
+          name: x.name || x.title || (x.code ? `Level ${x.code}` : "Level"),
+          desc: x.description || x.desc || "",
+        }))
+        .filter((x) => x.code);
     } catch {
       /* ignore and try next */
     }
@@ -87,9 +106,11 @@ export default function CefrLevelList() {
 body{ font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .dashboard-container{ display:flex; min-height:100vh; background: radial-gradient(1200px 400px at 80% -100px, rgba(124,58,237,.06), transparent 60%), var(--bg); }
 .sidebar{ width:240px; background:#fff; border-right:1px solid #e2e8f0; padding:16px; position:sticky; top:0; height:100vh; }
-.menu-item{ display:flex; align-items:center; gap:8px; padding:10px; cursor:pointer; border-radius:8px; margin-bottom:10px; color:#4a5568; font-weight:500; font-size:16px; text-decoration:none; }
-.menu-item.active, .menu-item:hover{ background:#f3f0ff; color:var(--primary); font-weight:600; }
-button.menu-item{ background:transparent; border:0; width:100%; text-align:left; }
+.menu-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#475569; font-weight:600; text-decoration:none; margin-bottom:6px; font-size:14px}
+.menu-item:hover{ background:#f3f0ff; color:var(--primary) }
+.menu-item.active{ background:#f3f0ff; color:var(--primary) }
+button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
+
 .content{ flex:1; padding:24px; max-width:1400px; margin:0 auto; }
 .content-header{ display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:18px; }
 .page-title{ font-size:28px; font-weight:800; color:var(--ink); margin:0; }
@@ -114,38 +135,52 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
 `}</style>
 
       <div className="dashboard-container">
-        {isSidebarOpen && <div className="backdrop" onClick={() => setIsSidebarOpen(false)} />}
+        {isSidebarOpen && (
+          <div className="backdrop" onClick={() => setIsSidebarOpen(false)} />
+        )}
 
         {/* Sidebar */}
         <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
           <div className="sidebar-header">
-            <h3 style={{ fontWeight: 700, margin: 0 }}>Dosen Dashboard</h3>
+            <h3 style={{ fontWeight: 700, margin: 0, marginBottom: 12 }}>
+              Lecturer
+            </h3>
           </div>
           {sidebarMenuDosen.map(({ label, icon, to, action, end }) =>
-  action === "logout" ? (
-    <button key={label} type="button" className="menu-item" onClick={handleLogout}>
-      {icon} {label}
-    </button>
-  ) : (
-    <NavLink
-      key={label}
-      to={to}
-      end={end}                          // <-- penting
-      className={({ isActive }) => `menu-item ${isActive ? "active" : ""}`}
-      onClick={() => setIsSidebarOpen(false)}
-    >
-      {icon} {label}
-    </NavLink>
-  )
-)}
-
+            action === "logout" ? (
+              <button
+                key={label}
+                type="button"
+                className="menu-item"
+                onClick={handleLogout}
+              >
+                {icon} {label}
+              </button>
+            ) : (
+              <NavLink
+                key={label}
+                to={to}
+                end={end} // <-- penting
+                className={({ isActive }) =>
+                  `menu-item ${isActive ? "active" : ""}`
+                }
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                {icon} {label}
+              </NavLink>
+            )
+          )}
         </aside>
 
         {/* Content */}
         <main className="content">
           <div className="content-header">
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button className="hamburger" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu">
+              <button
+                className="hamburger"
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="Open menu"
+              >
                 <Menu size={18} />
               </button>
               <h1 className="page-title">CEFR Modules</h1>
@@ -156,22 +191,27 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
             <div style={{ color: "#64748b" }}>Loading levels…</div>
           ) : (
             <div className="level-grid">
-              {levels.map((lv) => (
-                <div
-                  key={lv.code}
-                  className="level-card"
-                  onClick={() => navigate(`/lecture/cefr/${lv.code}`)}
-                  role="button"
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div className="level-code">{lv.code}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="level-name">{lv.name || `Level ${lv.code}`}</div>
-                      {lv.desc && <div className="level-desc">{lv.desc}</div>}
+              {levels.map((lv) => {
+                const title = stripCode(lv.name || `Level ${lv.code}`, lv.code);
+                return (
+                  <div
+                    key={lv.code}
+                    className="level-card"
+                    onClick={() => navigate(`/lecture/cefr/${lv.code}`)}
+                    role="button"
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 12 }}
+                    >
+                      <div className="level-code">{lv.code}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="level-name">{title}</div>
+                        {lv.desc && <div className="level-desc">{lv.desc}</div>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </main>
