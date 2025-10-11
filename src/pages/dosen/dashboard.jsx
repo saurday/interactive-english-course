@@ -13,6 +13,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { get, post, put, del, ApiError } from "@/config/api";
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
@@ -23,7 +24,6 @@ const sidebarMenuDosen = [
 ];
 
 const CACHE_KEY = "classes_cache_dosen";
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function DosenDashboard() {
   const navigate = useNavigate();
@@ -44,7 +44,6 @@ export default function DosenDashboard() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
 
-  const token = localStorage.getItem("token");
 
   // ===== Sync state + cache =====
   const syncCache = (next) => {
@@ -74,23 +73,16 @@ export default function DosenDashboard() {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`${BASE_URL}/api/kelas`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error(`Failed to load classes (${res.status})`);
-        const data = await res.json();
+        const data = await get("/kelas");
         syncCache(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError(err?.message || "Failed to load classes");
+     } catch (e) {
+   setError(e instanceof ApiError ? e.message : e?.message || "Failed to load classes");
       } finally {
         setIsLoading(false);
       }
     };
     load();
-  }, [token]);
+  }, []);
 
   // Tutup dropdown kebab saat klik di luar / tekan ESC
   useEffect(() => {
@@ -142,30 +134,12 @@ export default function DosenDashboard() {
     if (!title) return;
     try {
       if (formMode === "create") {
-        const res = await fetch(`${BASE_URL}/api/kelas`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ nama_kelas: title }),
-        });
-        if (!res.ok) throw new Error("Failed to create class");
-        const kelas = await res.json();
+        const kelas = await post("/kelas", { nama_kelas: title });
         const next = [...classes, kelas];
         syncCache(next);
         setNewClassCode(kelas.kode_kelas);
       } else {
-        const res = await fetch(`${BASE_URL}/api/kelas/${editingClass.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ nama_kelas: title }),
-        });
-        if (!res.ok) throw new Error("Failed to update class");
-        const updated = await res.json();
+       const updated = await put(`/kelas/${editingClass.id}`, { nama_kelas: title });
         const next = classes.map((c) =>
           c.id === editingClass.id ? updated : c
         );
@@ -182,11 +156,7 @@ export default function DosenDashboard() {
   // ===== DELETE =====
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/kelas/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to delete");
+      await del(`/kelas/${id}`);
       const next = classes.filter((c) => c.id !== id);
       syncCache(next);
     } catch (err) {
