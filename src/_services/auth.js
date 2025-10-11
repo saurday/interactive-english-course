@@ -1,17 +1,27 @@
 // src/_services/auth.js
-import { API } from "../_api";
-
+import { API } from "@/_api";
 /**
  * Login ke backend.
  * Backend (AuthController) mengembalikan:
  * { success, message, access_token, token_type, user }
  */
-export const login = async (email, password) => {
+export const login = async ({ email, password }) => {
   const { data } = await API.post("/login", { email, password });
   // Kamu simpan ke localStorage di komponen (Login.jsx),
   // jadi di sini cukup kembalikan data apa adanya:
   return data;
 };
+
+export const register = async (payload) => {
+  const { data } = await API.post("/register", payload);
+  return data;
+};
+
+export const me = async () => {
+  const { data } = await API.get("/user"); // ganti ke '/me' kalau backend-mu pakai itu
+  return data;
+};
+
 
 /**
  * Karena Sanctum token BUKAN JWT (opaque string),
@@ -39,18 +49,7 @@ export const useDecodeToken = (token) => {
  * Tidak perlu kirim body { token }.
  */
 export const logout = async () => {
-  const accessToken =
-    localStorage.getItem("accessToken") || localStorage.getItem("token");
-
-  const { data } = await API.post(
-    "/logout",
-    {}, // body kosong
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+  const { data } = await API.post("/logout", {}); // interceptor inject Bearer
 
   // bersihkan storage
   localStorage.removeItem("accessToken");
