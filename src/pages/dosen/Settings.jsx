@@ -1,25 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
-  Home,
-  BarChart2,
-  Settings as SettingsIcon,
-  LogOut,
-  Menu,
-  User,
-  Mail,
-  KeyRound,
-  Eye,
-  EyeOff,
-  Save,
-  CheckCircle,
-  XCircle,
-  BookOpen,
+  Home, BarChart2, Settings as SettingsIcon, LogOut, Menu,
+  User, Mail, KeyRound, Eye, EyeOff, Save, CheckCircle, XCircle, BookOpen,
 } from "lucide-react";
+import { get, put } from "@/config/api";
 
-/* ====== Config & helpers ====== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+/* ====== helpers ====== */
 const getUserId = () => {
   try {
     const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
@@ -28,12 +15,6 @@ const getUserId = () => {
     return null;
   }
 };
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
 
 /* ====== Page ====== */
 export default function LecturerSettings() {
@@ -54,27 +35,19 @@ export default function LecturerSettings() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null); // {type:'success'|'error', text:string}
+  const [msg, setMsg] = useState(null); // {type:'success'|'error', text}
 
   const userId = getUserId();
 
   const sidebar = [
     { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
-    {
-      label: "CEFR Modules",
-      icon: <BookOpen size={18} />,
-      to: "/lecture/cefr",
-    },
+    { label: "CEFR Modules", icon: <BookOpen size={18} />, to: "/lecture/cefr" },
     { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
-    {
-      label: "Settings",
-      icon: <SettingsIcon size={18} />,
-      to: "/lecture/settings",
-    },
+    { label: "Settings", icon: <SettingsIcon size={18} />, to: "/lecture/settings" },
     { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
   ];
 
-  // meta viewport (konsisten dengan halaman lain)
+  // meta viewport
   useEffect(() => {
     let meta = document.querySelector('meta[name="viewport"]');
     if (!meta) {
@@ -88,35 +61,28 @@ export default function LecturerSettings() {
     );
   }, []);
 
-  // preload dari localStorage biar instan
+  // preload dari localStorage agar instan
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
       if (u?.name) setName(u.name);
       if (u?.email) setEmail(u.email);
     } catch {
-      /* ignore */
+      // ignore 
     }
   }, []);
 
-  // fetch dari server untuk kebenaran data
+  // fetch dari server (tanpa /api)
   useEffect(() => {
     if (!userId) return;
     (async () => {
       setLoading(true);
       try {
-        const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(`Failed (${r.status})`);
-        const u = await r.json();
+        const u = await get(`users/${userId}`); // ⬅️ BUKAN /api/users
         setName(u.name || "");
         setEmail(u.email || "");
       } catch (e) {
-        setMsg({
-          type: "error",
-          text: e?.message || "Failed to load profile.",
-        });
+        setMsg({ type: "error", text: e?.message || "Failed to load profile." });
       } finally {
         setLoading(false);
       }
@@ -128,7 +94,7 @@ export default function LecturerSettings() {
     try {
       localStorage.clear();
     } catch {
-      /* ignore */
+      // ignore
     }
     navigate("/");
   };
@@ -141,10 +107,7 @@ export default function LecturerSettings() {
     }
     if (newPwd || newPwd2 || curPwd) {
       if (!curPwd) {
-        setMsg({
-          type: "error",
-          text: "Enter current password to change password.",
-        });
+        setMsg({ type: "error", text: "Enter current password to change password." });
         return;
       }
       if (newPwd.length < 6) {
@@ -164,32 +127,18 @@ export default function LecturerSettings() {
       const body = {
         name: name.trim(),
         email: email.trim(),
+        ...(curPwd && newPwd
+          ? {
+              current_password: curPwd,
+              password: newPwd,
+              password_confirmation: newPwd2,
+            }
+          : {}),
       };
-      // Jika ada permintaan ganti password
-      if (curPwd && newPwd) {
-        body.current_password = curPwd;
-        body.password = newPwd;
-        body.password_confirmation = newPwd2;
-      }
 
-      const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify(body),
-      });
+      const j = await put(`users/${userId}`, body); // ⬅️ BUKAN /api/users
 
-      const j = await r.json();
-      if (!r.ok) {
-        // tampilkan error dari backend bila ada
-        const firstError =
-          j?.message ||
-          (j?.errors &&
-            Object.values(j.errors)[0] &&
-            Object.values(j.errors)[0][0]);
-        throw new Error(firstError || `Gagal menyimpan (${r.status})`);
-      }
-
-      // perbarui localStorage userInfo biar konsisten
+      // update local storage agar konsisten
       try {
         localStorage.setItem(
           "userInfo",
@@ -201,20 +150,22 @@ export default function LecturerSettings() {
           })
         );
       } catch {
-        /* ignore */
+        // ignore
       }
 
-      // bersihkan field password
       setCurPwd("");
       setNewPwd("");
       setNewPwd2("");
-
       setMsg({ type: "success", text: "Profil berhasil diperbarui." });
     } catch (e) {
-      setMsg({
-        type: "error",
-        text: e?.message || "Gagal menyimpan perubahan.",
-      });
+      // coba ambil pesan error dari backend jika tersedia
+      const text =
+        e?.response?.data?.message ||
+        (e?.response?.data?.errors &&
+          Object.values(e.response.data.errors)[0]?.[0]) ||
+        e?.message ||
+        "Gagal menyimpan perubahan.";
+      setMsg({ type: "error", text });
     } finally {
       setSaving(false);
     }
