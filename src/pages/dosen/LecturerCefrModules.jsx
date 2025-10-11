@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 /* ================== Constants ================== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { BASE_URL } from "@/config/api";
 
 /* ================== Little utils ================== */
 const resKey = (levelKey) => `cefr:${levelKey}:resources`;
@@ -223,33 +223,35 @@ async function fetchCefrResources(levelId, token) {
 
 async function createCefrResource(levelId, payload, token) {
   const fd = new FormData();
+  fd.append("type", "composite"); // ← TAMBAH INI
   fd.append("title", payload.title || "");
-  if (payload.includeText)  fd.append("text", payload.text || "");
+  if (payload.includeText) fd.append("text", payload.text || "");
   if (payload.includeVideo) fd.append("video_url", payload.videoUrl || "");
-  if (payload.includeFile && payload.file)    fd.append("file", payload.file);
-  if (payload.includeFile && payload.fileUrl) fd.append("file_url", payload.fileUrl);
+  if (payload.includeFile && payload.file) fd.append("file", payload.file);
+  if (payload.includeFile && payload.fileUrl)
+    fd.append("file_url", payload.fileUrl);
 
   const url = `${BASE_URL}/api/cefr-levels/${levelId}/resources`;
   const r = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: "application/json",     // ← penting supaya Laravel balas JSON (bukan HTML)
+      Accept: "application/json",
     },
     body: fd,
   });
 
   if (!r.ok) {
     let msg = await r.text();
-    try { msg = JSON.parse(msg).message || msg;  } catch {
+    try {
+      msg = JSON.parse(msg).message || msg;
+    } catch {
       /* ignore */
     }
     throw new Error(`Create failed (${r.status}): ${msg}`);
   }
   return normalizeResource(await r.json());
 }
-
-
 
 async function updateResource(resourceId, payload, token) {
   const fd = new FormData();
@@ -561,11 +563,13 @@ export default function LecturerCefrModules() {
     setSideOpen(false);
   }
 
-async function saveMaterial(updated) {
-  if (!updated.includeText && !updated.includeVideo && !updated.includeFile) {
-    alert("Pilih minimal satu: Text, Video, atau File.");
-    return;
-  }    try {
+  async function saveMaterial(updated) {
+    if (!updated.includeText && !updated.includeVideo && !updated.includeFile) {
+      alert("Pilih minimal satu: Text, Video, atau File.");
+      return;
+    }
+
+    try {
       let saved;
       if (updated.id) saved = await updateResource(updated.id, updated, token);
       else {
@@ -573,17 +577,18 @@ async function saveMaterial(updated) {
         saved = await createCefrResource(levelId, updated, token);
       }
 
+      const existed = items.some((p) => p.id === saved.id); // ← cek dulu
+
       setItems((prev) => {
-        const exists = prev.some((p) => p.id === saved.id);
-        const next = exists
+        const next = existed
           ? prev.map((p) => (p.id === saved.id ? saved : p))
           : [...prev, saved];
         localStorage.setItem(resKey(level), JSON.stringify(next));
         return next;
       });
+
       setShowEdit(false);
-      const idx = items.findIndex((x) => x.id === saved.id);
-      setActive(idx >= 0 ? idx : Math.max(items.length - 1, 0));
+      setActive(existed ? active : items.length); 
     } catch (e) {
       alert(e.message || "Failed to save");
     }
