@@ -1,19 +1,11 @@
 // src/pages/lecture/CefrLevelList.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Home,
-  BookOpen,
-  Settings,
-  LogOut,
-  Menu,
-  BarChart2,
-} from "lucide-react";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { Home, BookOpen, Settings, LogOut, Menu, BarChart2 } from "lucide-react";
+import { get } from "@/config/api"; // gunakan axios wrapper yang sudah handle baseURL/token
 
 const sidebarMenuDosen = [
-  { label: "Dashboard", icon: <Home size={18} />, to: "/lecture", end: true }, // <-- tambahkan end
+  { label: "Dashboard", icon: <Home size={18} />, to: "/lecture", end: true },
   { label: "CEFR Modules", icon: <BookOpen size={18} />, to: "/lecture/cefr" },
   { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
   { label: "Settings", icon: <Settings size={18} />, to: "/lecture/settings" },
@@ -32,64 +24,54 @@ const STATIC_CEFR = [
 // hapus "A1 ", "A2 -", dst di depan nama
 function stripCode(name = "", code = "") {
   if (!name) return name;
-  // contoh yang ditangani: "A1 Beginner", "A1 - Beginner", "A1: Beginner"
   const re = new RegExp(`^\\s*${code}\\s*[-:]?\\s*`, "i");
   return name.replace(re, "").trim();
 }
 
-// Coba beberapa endpoint; fallback ke STATIC_CEFR bila gagal/kosong
-async function fetchLevels(token) {
-  const tries = [`${BASE_URL}/api/cefr-levels`, `${BASE_URL}/api/cefr-levels`];
-  for (const url of tries) {
-    try {
-      const r = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      if (!r.ok) continue;
-      const j = await r.json();
-      const arr = Array.isArray(j) ? j : j.levels || j.data || [];
-      if (!Array.isArray(arr) || arr.length === 0) continue;
-
-      // Normalisasi agar punya {code,name,desc}
-      return arr
-        .map((x) => ({
-          id: x.id,
-          code:
-            x.code ||
-            x.level ||
-            (typeof x.name === "string" ? x.name.toUpperCase() : ""),
-          name: x.name || x.title || (x.code ? `Level ${x.code}` : "Level"),
-          desc: x.description || x.desc || "",
-        }))
-        .filter((x) => x.code);
-    } catch {
-      /* ignore and try next */
-    }
+// Ambil level; 404/kosong -> fallback STATIC_CEFR (tanpa melempar error)
+async function fetchLevelsSafe() {
+  try {
+    const res = await get("cefr-levels"); // baseURL dari axios wrapper akan menambahkan /api jika diset
+    const arr = Array.isArray(res) ? res : res.levels || res.data || [];
+    const normalized = (arr || [])
+      .map((x) => ({
+        id: x.id,
+        code:
+          x.code ||
+          x.level ||
+          (typeof x.name === "string" ? x.name.toUpperCase() : ""),
+        name: x.name || x.title || (x.code ? `Level ${x.code}` : "Level"),
+        desc: x.description || x.desc || "",
+      }))
+      .filter((x) => x.code);
+    return normalized.length ? normalized : STATIC_CEFR;
+  } catch (e) {
+    const status = e?.status || e?.response?.status;
+    if (status === 404) return STATIC_CEFR; // treat 404 as empty
+    // Untuk menjaga console tetap bersih saat dev, fallback juga
+    return STATIC_CEFR;
   }
-  return STATIC_CEFR;
 }
 
 export default function CefrLevelList() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token") || "";
   const [levels, setLevels] = useState(STATIC_CEFR);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Guard agar tidak double fetch di React StrictMode (dev)
+  const once = useRef(false);
   useEffect(() => {
+    if (once.current) return;
+    once.current = true;
+
     (async () => {
-      try {
-        setLoading(true);
-        const data = await fetchLevels(token);
-        setLevels(data.length ? data : STATIC_CEFR);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(true);
+      const data = await fetchLevelsSafe();
+      setLevels(data);
+      setLoading(false);
     })();
-  }, [token]);
+  }, []);
 
   const handleLogout = (e) => {
     e?.preventDefault?.();
@@ -100,9 +82,7 @@ export default function CefrLevelList() {
   return (
     <>
       <style>{`
-:root{
-  --primary:#7c3aed; --primary-50:#f5f3ff; --ink:#1f2937; --muted:#64748b; --bg:#f8f7ff;
-}
+:root{ --primary:#7c3aed; --primary-50:#f5f3ff; --ink:#1f2937; --muted:#64748b; --bg:#f8f7ff; }
 body{ font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .dashboard-container{ display:flex; min-height:100vh; background: radial-gradient(1200px 400px at 80% -100px, rgba(124,58,237,.06), transparent 60%), var(--bg); }
 .sidebar{ width:240px; background:#fff; border-right:1px solid #e2e8f0; padding:16px; position:sticky; top:0; height:100vh; }
@@ -148,22 +128,15 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
           </div>
           {sidebarMenuDosen.map(({ label, icon, to, action, end }) =>
             action === "logout" ? (
-              <button
-                key={label}
-                type="button"
-                className="menu-item"
-                onClick={handleLogout}
-              >
+              <button key={label} type="button" className="menu-item" onClick={handleLogout}>
                 {icon} {label}
               </button>
             ) : (
               <NavLink
                 key={label}
                 to={to}
-                end={end} // <-- penting
-                className={({ isActive }) =>
-                  `menu-item ${isActive ? "active" : ""}`
-                }
+                end={end}
+                className={({ isActive }) => `menu-item ${isActive ? "active" : ""}`}
                 onClick={() => setIsSidebarOpen(false)}
               >
                 {icon} {label}
@@ -176,11 +149,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
         <main className="content">
           <div className="content-header">
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button
-                className="hamburger"
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open menu"
-              >
+              <button className="hamburger" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu">
                 <Menu size={18} />
               </button>
               <h1 className="page-title">CEFR Modules</h1>
@@ -200,9 +169,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                     onClick={() => navigate(`/lecture/cefr/${lv.code}`)}
                     role="button"
                   >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div className="level-code">{lv.code}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="level-name">{title}</div>
