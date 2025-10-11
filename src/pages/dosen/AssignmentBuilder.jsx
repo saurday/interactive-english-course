@@ -8,8 +8,7 @@ import {
   Upload,
   Hash,
 } from "lucide-react";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { get, post, ApiError } from "@/config/api";
 
 /* ---------- Toast sederhana ---------- */
 function Toast({ open, text }) {
@@ -46,7 +45,6 @@ export default function AssignmentBuilder() {
   const { id: classId, week, assignmentId } = useParams();
   const isEdit = Boolean(assignmentId);
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   const [form, setForm] = useState({
     title: "",
@@ -69,41 +67,33 @@ export default function AssignmentBuilder() {
   useEffect(() => {
     if (!isEdit) return;
     (async () => {
-      try {
-        const r = await fetch(`${BASE_URL}/api/assignments/${assignmentId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!r.ok) throw new Error(`Load assignment failed (${r.status})`);
-        const { assignment } = await r.json();
-        setForm({
-          title: assignment.title || "",
-          instructions: assignment.instructions || "",
-          // untuk input type="datetime-local"
-          due_date: assignment.due_date ? assignment.due_date.slice(0, 16) : "",
-          max_score: assignment.max_score ?? 100,
-          allow_file: !!assignment.allow_file,
-        });
-      } catch (e) {
-        console.error(e);
-        showToast(e.message || "Failed to load");
-      }
-    })();
-  }, [isEdit, assignmentId, token]);
+   try {
+     const data = await get(`/assignments/${assignmentId}`);
+     const a = data?.assignment ?? data; // backend bisa kirim {assignment: {...}} atau object langsung
+     setForm({
+       title: a?.title || "",
+       instructions: a?.instructions || "",
+       due_date: a?.due_date ? String(a.due_date).slice(0, 16) : "",
+       max_score: a?.max_score ?? 100,
+       allow_file: !!a?.allow_file,
+     });
+   } catch (e) {
+     console.error(e);
+     const msg = e instanceof ApiError ? (e.data?.message || e.message) : e?.message;
+     showToast(msg || "Failed to load");
+   }
+ })();
+}, [isEdit, assignmentId]);
 
-  async function getWeekIdByNumber(classId, weekNumber, token) {
-    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
-    if (!r.ok) throw new Error(`Load weeks failed (${r.status})`);
-    const list = await r.json();
+
+ async function getWeekIdByNumber(classId, weekNumber) {
+   const list = await get(`/kelas/${classId}/weeks`);
     const w = (Array.isArray(list) ? list : list.weeks || []).find(
       (x) => Number(x.week_number ?? x.week) === Number(weekNumber)
     );
     return w?.id || null;
   }
+
 
   const save = async () => {
     if (!form.title.trim()) return showToast("Title is required");
@@ -112,51 +102,40 @@ export default function AssignmentBuilder() {
       setSaving(true);
 
       // 0) pastikan kita punya week_id
-      const weekId = await getWeekIdByNumber(classId, week, token);
+     const weekId = await getWeekIdByNumber(classId, week);
       if (!weekId) throw new Error("Week not found");
 
       // 1) buat assignment
-      const ra = await fetch(`${BASE_URL}/api/assignments`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          title: form.title,
-          instructions: form.instructions,
-          due_date: form.due_date || null,
-          max_score: Number(form.max_score) || 100,
-          allow_file: !!form.allow_file,
-          kelas_id: classId,
-        }),
-      });
-      if (!ra.ok) throw new Error(`Create assignment failed (${ra.status})`);
-      const aJson = await ra.json();
-      const assignmentId = (aJson.assignment || aJson).id;
+       const aJson = await post("/assignments", {
+       title: form.title,
+       instructions: form.instructions,
+       due_date: form.due_date || null,
+       max_score: Number(form.max_score) || 100,
+       allow_file: !!form.allow_file,
+       kelas_id: classId,
+     });
+     const assignmentId = (aJson.assignment || aJson).id;
 
+     
       // 2) tempel ke week sebagai course resource (type: assignment)
       const fd = new FormData();
       fd.append("type", "assignment");
       fd.append("title", form.title);
       fd.append("assignment_id", assignmentId);
 
-      const rr = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        body: fd,
-      });
-      if (!rr.ok) throw new Error(`Create resource failed (${rr.status})`);
+           await post(`/weeks/${weekId}/resources`, fd); // helper auto-handle FormData
 
       showToast("Assignment saved!");
       navigate(`/lecture/classes/${classId}/weeks/${week}`);
-    } catch (e) {
-      console.error(e);
-      showToast(e.message || "Failed to save assignment");
+  } catch (e) {
+     console.error(e);
+     const msg =
+       e instanceof ApiError
+         ? (e.data?.message ||
+            (e.data?.errors && Object.values(e.data.errors).flat().join(", ")) ||
+            e.message)
+         : e?.message;
+     showToast(msg || "Failed to save assignment");
     } finally {
       setSaving(false);
     }
