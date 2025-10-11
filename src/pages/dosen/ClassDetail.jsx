@@ -18,7 +18,7 @@ import {
   BookOpen,
 } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { get, post, put, del, ApiError } from "@/config/api";
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture" },
@@ -35,7 +35,6 @@ export default function ClassDetail() {
   const [klass, setKlass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
-  const token = localStorage.getItem("token");
 
   // local store resources
   const [resources, setResources] = useState([]);
@@ -51,20 +50,22 @@ export default function ClassDetail() {
   const [stuErr, setStuErr] = useState(null);
 
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setStuLoading(true);
-      setStuErr(null);
-      try {
-        const list = await fetchClassStudents(id, token);
-        setStudents(list);
-      } catch (e) {
-        setStuErr(e?.message || "Failed to load students");
-      } finally {
-        setStuLoading(false);
-      }
-    })();
-  }, [id, token]);
+     if (!id) return;
+     (async () => {
+       setStuLoading(true);
+       setStuErr(null);
+       try {
+        const list = await fetchClassStudents(id);
+         setStudents(list);
+       } catch (e) {
+        const msg = e instanceof ApiError ? (e.data?.message || e.message) : e?.message;
+        setStuErr(msg || "Failed to load students");
+       } finally {
+         setStuLoading(false);
+       }
+     })();
+  }, [id]);
+
 
   // Tutup week menu saat klik di luar atau tekan ESC
   useEffect(() => {
@@ -110,125 +111,103 @@ export default function ClassDetail() {
     return first?.weekId ?? null;
   };
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      setErr(null);
-      const res = await fetch(`${BASE_URL}/api/kelas/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      if (res.status === 404) {
+    const load = async () => {
+     try {
+       setLoading(true);
+       setErr(null);
+
+      const data = await get(`/kelas/${id}`);
+       setKlass(data);
+
+    } catch (e) {
+      const status = e instanceof ApiError ? e.status : 0;
+      if (status === 404) {
         setErr("Class not found");
         setKlass(null);
-        return;
+      } else {
+        setErr(e?.message || "Failed to load class");
       }
-      if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-      const data = await res.json();
-      setKlass(data);
-    } catch (e) {
-      setErr(e.message || "Failed to load class");
-    } finally {
-      setLoading(false);
-    }
-  };
+     } finally {
+       setLoading(false);
+     }
+   };
+
 
   const resKey = (cid) => `resources:${cid}`;
 
-  async function fetchWeeksForClass(classId, token) {
-    try {
-      const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
+async function fetchWeeksForClass(classId) {
+  try {
+    const data = await get(`/kelas/${classId}/weeks`);
+    const weeksArr = Array.isArray(data) ? data : (data?.weeks || []);
 
-      if (r.status === 404) return [];
-      if (!r.ok) throw new Error(`Failed to fetch weeks (${r.status})`);
+    const items = [];
+    weeksArr.forEach((w) => {
+      const weekNo = w.week_number ?? w.week ?? null;
+      const weekId = w.id ?? w.week_id ?? null;
 
-      const data = await r.json();
-      const weeksArr = Array.isArray(data) ? data : data.weeks || [];
-
-      const items = [];
-      weeksArr.forEach((w) => {
-        const weekNo = w.week_number ?? w.week ?? null;
-        const weekId = w.id ?? w.week_id ?? null;
-        if (Array.isArray(w.resources) && w.resources.length) {
-          w.resources.forEach((res) => {
-            items.push({
-              id: res.id,
-              week: weekNo ?? res.week_number,
-              weekId,
-              type: res.type,
-              title: res.title,
-              text: res.text,
-              videoUrl: res.video_url,
-              fileUrl: res.file_url,
-            });
-          });
-        } else if (weekNo != null) {
+      if (Array.isArray(w.resources) && w.resources.length) {
+        w.resources.forEach((res) => {
           items.push({
-            id: `week-${weekNo}`,
-            week: weekNo,
+            id: res.id,
+            week: Number(weekNo ?? res.week_number ?? res.week ?? 0),
             weekId,
-            type: "empty",
+            type: res.type,
+            title: res.title,
+            text: res.text,
+            videoUrl: res.video_url,
+            fileUrl: res.file_url,
           });
-        }
-      });
+        });
+      } else if (weekNo != null) {
+        items.push({
+          id: `week-${weekNo}`,
+          week: Number(weekNo),
+          weekId,
+          type: "empty",
+        });
+      }
+    });
 
-      return items;
-    } catch (e) {
-      console.error(e);
-      return [];
+    return items;
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+
+
+async function fetchClassStudents(classId) {
+  let j;
+  try {
+    j = await get(`/kelas/${classId}/students`);
+  } catch (e) {
+    const status = e instanceof ApiError ? e.status : 0;
+    if (status === 404 || status === 405) {
+      j = await get(`/kelas/${classId}/mahasiswa`);
+    } else {
+      throw e;
     }
   }
 
-  async function fetchClassStudents(classId, token) {
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
+  const raw =
+    (Array.isArray(j?.students) ? j.students : null) ||
+    (Array.isArray(j?.mahasiswa) ? j.mahasiswa : null) ||
+    (Array.isArray(j) ? j : []) ||
+    [];
+
+  return raw.map((row, i) => {
+    const m = row.mahasiswa || row.student || row.user || row;
+    return {
+      id: m?.id ?? row.id ?? row.mahasiswa_id ?? row.student_id ?? `row-${i}`,
+      name: m?.full_name ?? m?.nama_lengkap ?? m?.name ?? m?.nama ?? "-",
+      email: m?.email ?? "",
+      joinedAt: row.joined_at ?? row.created_at ?? m?.joined_at ?? null,
     };
+  });
+}
 
-    // 1) coba /students
-    let r = await fetch(`${BASE_URL}/api/kelas/${classId}/students`, {
-      headers,
-    });
 
-    // 2) fallback /mahasiswa kalau 404 atau payload tidak berisi data
-    if (r.status === 404 || r.status === 405) {
-      r = await fetch(`${BASE_URL}/api/kelas/${classId}/mahasiswa`, {
-        headers,
-      });
-    }
-
-    if (!r.ok) throw new Error(`Failed to load students (${r.status})`);
-
-    const j = await r.json();
-
-    // normalisasi berbagai bentuk payload:
-    // - {students:[...]}, {mahasiswa:[...]}, atau langsung array
-    const raw =
-      (Array.isArray(j?.students) && j.students) ||
-      (Array.isArray(j?.mahasiswa) && j.mahasiswa) ||
-      (Array.isArray(j) && j) ||
-      [];
-
-    // beberapa API mengembalikan row join: {mahasiswa:{...}, joined_at:...}
-    return raw.map((row, i) => {
-      const m = row.mahasiswa || row.student || row.user || row; // fallback ke objek dalam
-
-      return {
-        id: m?.id ?? row.id ?? row.mahasiswa_id ?? row.student_id ?? `row-${i}`,
-        name: m?.full_name ?? m?.nama_lengkap ?? m?.name ?? m?.nama ?? "-",
-        email: m?.email ?? "",
-        joinedAt: row.joined_at ?? row.created_at ?? m?.joined_at ?? null,
-      };
-    });
-  }
 
   // 1) restore dari localStorage
   useEffect(() => {
@@ -249,13 +228,14 @@ export default function ClassDetail() {
 
   // 3) weeks/resources dari backend
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      const items = await fetchWeeksForClass(id, token);
-      setResources(items);
-      localStorage.setItem(resKey(id), JSON.stringify(items));
-    })();
-  }, [id, token]);
+     if (!id) return;
+     (async () => {
+      const items = await fetchWeeksForClass(id);
+       setResources(items);
+       localStorage.setItem(resKey(id), JSON.stringify(items));
+     })();
+  }, [id]);
+
 
   // 4) sinkron ke localStorage saat berubah
   useEffect(() => {
@@ -316,30 +296,20 @@ export default function ClassDetail() {
     });
   };
 
-  const apiRenameWeek = async (oldNo, newNo) => {
-    const weekId = getWeekIdByNumber(oldNo);
-    if (!weekId) throw new Error("Week Id not found.");
-    const r = await fetch(`${BASE_URL}/api/weeks/${weekId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ week_number: Number(newNo) }),
-    });
-    if (!r.ok) throw new Error(`Failed to rename week (${r.status})`);
-  };
+     const apiRenameWeek = async (oldNo, newNo) => {
+     const weekId = getWeekIdByNumber(oldNo);
+     if (!weekId) throw new Error("Week Id not found.");
 
-  const apiDeleteWeek = async (no) => {
-    const weekId = getWeekIdByNumber(no);
-    if (!weekId) throw new Error("Week Id not found.");
-    const r = await fetch(`${BASE_URL}/api/weeks/${weekId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
-    if (!r.ok) throw new Error(`Failed to delete week (${r.status})`);
-  };
+    await put(`/weeks/${weekId}`, { week_number: Number(newNo) });
+   };
+
+   const apiDeleteWeek = async (no) => {
+     const weekId = getWeekIdByNumber(no);
+     if (!weekId) throw new Error("Week Id not found.");
+
+    await del(`/weeks/${weekId}`);
+   };
+
 
   return (
     <>
@@ -1001,7 +971,6 @@ function Tabs({
 // ===== Modal Add Resource / Create Week (COMPOSITE) =====
 function CreateWeekModal({ onClose, onSave }) {
   const { id: classId } = useParams();
-  const token = localStorage.getItem("token");
 
   const [saving, setSaving] = useState(false);
   const [week, setWeek] = useState("");
@@ -1051,14 +1020,10 @@ function CreateWeekModal({ onClose, onSave }) {
     if (row.includeFile && row.file) fd.append("file", row.file);
     if (row.includeFile) fd.append("file_url", row.fileUrl || "");
 
-    const r = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      body: fd,
-    });
-    if (!r.ok) throw new Error(`Create resource failed (${r.status})`);
-    const j = await r.json();
-    const res = j.resource || j;
+
+  const j = await post(`/weeks/${weekId}/resources`, fd);
+   const res = j.resource || j;
+
 
     return {
       id: res.id,
@@ -1091,13 +1056,8 @@ function CreateWeekModal({ onClose, onSave }) {
       // 1) buat week dulu (tanpa resources)
       const fd = new FormData();
       fd.append("week_number", week);
-      const res = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      if (!res.ok) throw new Error(`Create week failed (${res.status})`);
-      const json = await res.json();
+
+const json = await post(`/kelas/${classId}/weeks`, fd);
 
       const weekId = json?.week?.id ?? json?.id ?? json?.week_id;
       const weekNumber =
