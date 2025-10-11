@@ -9,15 +9,13 @@ import {
   X,
   Save,
 } from "lucide-react";
-
-/* ================== Constants ================== */
-import { BASE_URL } from "@/config/api";
+import { get, post, del } from "@/config/api"; // ← gunakan wrapper API (axios) satu pintu
 
 /* ================== Little utils ================== */
 const resKey = (levelKey) => `cefr:${levelKey}:resources`;
 const isNum = (v) => /^\d+$/.test(String(v || ""));
 
-/* ===== build/embed helpers (copied & trimmed from WeekDetail) ===== */
+/* ===== build/embed helpers ===== */
 function toYouTubeEmbed(raw) {
   try {
     const u = new URL(raw);
@@ -35,7 +33,7 @@ function toYouTubeEmbed(raw) {
         return `https://www.youtube.com/embed/${parts[1]}`;
     }
   } catch {
-    /* ignore and try next */
+    // ignore
   }
   return raw;
 }
@@ -60,22 +58,30 @@ function prepareEmbedSrc(rawUrl) {
     }
     return { type: "iframe", src, open: url };
   }
-  if (url.includes("docs.google.com/document")) {
-    const src = url.replace(/\/edit.*$/, "/pub?embedded=true");
-    return { type: "iframe", src, open: url };
-  }
-  if (url.includes("docs.google.com/spreadsheets")) {
-    const src = url.replace(/\/edit.*$/, "/pubhtml?widget=true&headers=false");
-    return { type: "iframe", src, open: url };
-  }
-  if (url.includes("docs.google.com/forms")) {
-    const src = url.replace(/\/viewform.*$/, "/viewform?embedded=true");
-    return { type: "iframe", src, open: url };
-  }
-  if (url.includes("drive.google.com")) {
-    const src = url.replace(/\/view(\?.*)?$/, "/preview");
-    return { type: "iframe", src, open: url };
-  }
+  if (url.includes("docs.google.com/document"))
+    return {
+      type: "iframe",
+      src: url.replace(/\/edit.*$/, "/pub?embedded=true"),
+      open: url,
+    };
+  if (url.includes("docs.google.com/spreadsheets"))
+    return {
+      type: "iframe",
+      src: url.replace(/\/edit.*$/, "/pubhtml?widget=true&headers=false"),
+      open: url,
+    };
+  if (url.includes("docs.google.com/forms"))
+    return {
+      type: "iframe",
+      src: url.replace(/\/viewform.*$/, "/viewform?embedded=true"),
+      open: url,
+    };
+  if (url.includes("drive.google.com"))
+    return {
+      type: "iframe",
+      src: url.replace(/\/view(\?.*)?$/, "/preview"),
+      open: url,
+    };
 
   const clean = url.split("#")[0];
   const path = clean.split("?")[0];
@@ -100,7 +106,6 @@ function prepareEmbedSrc(rawUrl) {
 function FileViewer({ url, title = "File" }) {
   const { type, src, open } = React.useMemo(() => prepareEmbedSrc(url), [url]);
   if (!url) return <div className="muted">No file URL.</div>;
-
   if (type === "image")
     return (
       <img
@@ -150,9 +155,9 @@ function FileViewer({ url, title = "File" }) {
   );
 }
 
-/* ================== Normalizers ================== */
+/* ================== Normalizer ================== */
 function normalizeResource(r) {
-  const k = r.resource || r;
+  const k = r?.resource || r || {};
   return {
     id: k.id,
     type: k.type || "composite",
@@ -163,67 +168,28 @@ function normalizeResource(r) {
   };
 }
 
-/* ================== API (level + resources) ================== */
-async function fetchLevelHeader(levelKey, token) {
-  const byId = [
-    `${BASE_URL}/api/cefr-levels/${levelKey}`,
-    `${BASE_URL}/api/cefr/levels/${levelKey}`,
-  ];
-  const byCode = [
-    `${BASE_URL}/api/cefr-levels/by-code/${levelKey}`,
-    `${BASE_URL}/api/cefr/levels/by-code/${levelKey}`,
-  ];
-  const tries = isNum(levelKey) ? byId : byCode;
+/* ================== API (via wrapper) ================== */
+// 1) Header level
+async function fetchLevelHeader(levelKey) {
+  const path = isNum(levelKey)
+    ? `cefr-levels/${levelKey}`
+    : `cefr-levels/by-code/${encodeURIComponent(levelKey)}`;
 
-  for (const url of tries) {
-    try {
-      const r = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      if (r.ok) {
-        const j = await r.json();
-        return j.level || j.data || j;
-      }
-    } catch {
-      /* ignore and try next */
-    }
-  }
-  throw new Error("Level not found");
+  const j = await get(path);
+  return j.level || j.data || j; // fleksibel mengikuti backend
 }
 
-async function fetchCefrResources(levelId, token) {
-  const tries = [
-    `${BASE_URL}/api/cefr-levels/${levelId}/resources`,
-    `${BASE_URL}/api/cefr/levels/${levelId}/resources`,
-  ];
-  for (const url of tries) {
-    try {
-      const r = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      if (r.ok) {
-        const j = await r.json();
-        const arr = Array.isArray(j) ? j : j.resources || j.data || [];
-        return arr.map(normalizeResource);
-      }
-    } catch {
-      /* ignore and try next */
-    }
-  }
-  return [];
+// 2) Daftar resources untuk level
+async function fetchCefrResources(levelId) {
+  const j = await get(`cefr-levels/${levelId}/resources`);
+  const arr = Array.isArray(j) ? j : j.resources || j.data || [];
+  return (arr || []).map(normalizeResource);
 }
 
-// src/pages/lecture/CefrModules.jsx  (hanya fungsi ini yang diubah)
-
-async function createCefrResource(levelId, payload, token) {
+// 3) Create / Update / Delete
+async function createCefrResource(levelId, payload) {
   const fd = new FormData();
-  fd.append("type", "composite"); // ← TAMBAH INI
+  fd.append("type", "composite");
   fd.append("title", payload.title || "");
   if (payload.includeText) fd.append("text", payload.text || "");
   if (payload.includeVideo) fd.append("video_url", payload.videoUrl || "");
@@ -231,29 +197,12 @@ async function createCefrResource(levelId, payload, token) {
   if (payload.includeFile && payload.fileUrl)
     fd.append("file_url", payload.fileUrl);
 
-  const url = `${BASE_URL}/api/cefr-levels/${levelId}/resources`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-    body: fd,
-  });
-
-  if (!r.ok) {
-    let msg = await r.text();
-    try {
-      msg = JSON.parse(msg).message || msg;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(`Create failed (${r.status}): ${msg}`);
-  }
-  return normalizeResource(await r.json());
+  // gunakan wrapper post (axios). Jangan set Content-Type secara manual agar FormData terdeteksi.
+  const res = await post(`cefr-levels/${levelId}/resources`, fd);
+  return normalizeResource(res);
 }
 
-async function updateResource(resourceId, payload, token) {
+async function updateResource(resourceId, payload) {
   const fd = new FormData();
   fd.append("_method", "PUT");
   fd.append("type", "composite");
@@ -263,21 +212,12 @@ async function updateResource(resourceId, payload, token) {
   if (payload.includeFile && payload.file) fd.append("file", payload.file);
   if (payload.includeFile) fd.append("file_url", payload.fileUrl || "");
 
-  const r = await fetch(`${BASE_URL}/api/cefr-resources/${resourceId}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    body: fd,
-  });
-  if (!r.ok) throw new Error(`Update failed (${r.status})`);
-  return normalizeResource(await r.json());
+  const res = await post(`cefr-resources/${resourceId}`, fd);
+  return normalizeResource(res);
 }
 
-async function deleteResource(resourceId, token) {
-  const r = await fetch(`${BASE_URL}/api/cefr-resources/${resourceId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Delete failed (${r.status})`);
+async function deleteResource(resourceId) {
+  await del(`cefr-resources/${resourceId}`);
   return true;
 }
 
@@ -463,7 +403,6 @@ function EditMaterialModal({ open, data, onClose, onSave }) {
 /* ================== Main Page ================== */
 export default function LecturerCefrModules() {
   const { level } = useParams(); // e.g. "A1" atau "3"
-  const token = localStorage.getItem("token") || "";
   const role = localStorage.getItem("role") || "dosen";
 
   const [levelInfo, setLevelInfo] = useState(null);
@@ -504,19 +443,19 @@ export default function LecturerCefrModules() {
     (async () => {
       setLoading(true);
 
-      // header
+      // 1) Header
       let info = null;
       try {
-        info = await fetchLevelHeader(level, token);
+        info = await fetchLevelHeader(level);
         setLevelInfo(info);
-        setLevelId(info.id || (isNum(level) ? Number(level) : null));
+        setLevelId(info?.id || (isNum(level) ? Number(level) : null));
       } catch (e) {
         console.error(e);
         setLevelInfo(null);
         setLevelId(isNum(level) ? Number(level) : null);
       }
 
-      // cache
+      // 2) tampilkan cache dulu (jika ada)
       try {
         const raw = localStorage.getItem(resKey(level));
         const cached = raw ? JSON.parse(raw) : [];
@@ -525,13 +464,14 @@ export default function LecturerCefrModules() {
           setActive(0);
         }
       } catch {
-        /* ignore and try next */
+        // ignore
       }
-      // fresh
+
+      // 3) fetch fresh dari server (butuh levelId valid)
       try {
         const vids = info?.id || (isNum(level) ? Number(level) : null);
         if (!vids) throw new Error("Level id missing");
-        const fresh = await fetchCefrResources(vids, token);
+        const fresh = await fetchCefrResources(vids);
         setItems(fresh);
         localStorage.setItem(resKey(level), JSON.stringify(fresh));
         setActive(0);
@@ -541,12 +481,12 @@ export default function LecturerCefrModules() {
         setLoading(false);
       }
     })();
-  }, [level, token]);
+  }, [level]);
 
   const current = items[active] || null;
 
   function openAdd(target = null) {
-    let base = {
+    const base = {
       id: target?.id ?? null,
       type: "composite",
       title: target?.title || "",
@@ -568,17 +508,16 @@ export default function LecturerCefrModules() {
       alert("Pilih minimal satu: Text, Video, atau File.");
       return;
     }
-
     try {
       let saved;
-      if (updated.id) saved = await updateResource(updated.id, updated, token);
-      else {
+      if (updated.id) {
+        saved = await updateResource(updated.id, updated);
+      } else {
         if (!levelId) throw new Error("Missing level id");
-        saved = await createCefrResource(levelId, updated, token);
+        saved = await createCefrResource(levelId, updated);
       }
 
-      const existed = items.some((p) => p.id === saved.id); // ← cek dulu
-
+      const existed = items.some((p) => p.id === saved.id);
       setItems((prev) => {
         const next = existed
           ? prev.map((p) => (p.id === saved.id ? saved : p))
@@ -588,7 +527,7 @@ export default function LecturerCefrModules() {
       });
 
       setShowEdit(false);
-      setActive(existed ? active : items.length); 
+      setActive(existed ? active : items.length);
     } catch (e) {
       alert(e.message || "Failed to save");
     }
@@ -598,7 +537,7 @@ export default function LecturerCefrModules() {
     if (!current?.id) return;
     if (!confirm("Delete this material?")) return;
     try {
-      await deleteResource(current.id, token);
+      await deleteResource(current.id);
       setItems((prev) => {
         const next = prev.filter((x) => x.id !== current.id);
         localStorage.setItem(resKey(level), JSON.stringify(next));
@@ -616,24 +555,20 @@ export default function LecturerCefrModules() {
 :root { --violet:#6b46c1; --violet-700:#553c9a; }
 body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
 
-/* layout */
 .wrap{ display:grid; grid-template-columns: clamp(260px, 22vw, 360px) 1fr; gap: clamp(12px,2vw,24px); width:100%; max-width:100%; padding: 12px clamp(12px, 2vw, 24px); }
 .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; }
 .left{ padding:12px; }
 .right{ padding:18px; min-height:60vh; }
 
-/* breadcrumb */
 .breadcrumb{ display:flex; align-items:center; gap:8px; color:#475569; font-weight:600; margin:12px 0 6px; }
 .breadcrumb a{ color:#475569; text-decoration:none; }
 .breadcrumb a:hover{ text-decoration:underline; }
 
-/* buttons */
 .btn, .inline-btn{ padding:10px 14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; font-weight:700; cursor:pointer; }
 .btn:hover, .inline-btn:hover{ background:#f8fafc; }
 .btn-primary{ background:var(--violet); color:#fff; border-color:var(--violet); }
 .btn-primary:hover{ background:var(--violet-700); color:#fff; }
 
-/* sidebar list */
 .left-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .step-list{ display:flex; flex-direction:column; gap:6px; }
 .step{ display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:600; transition:.15s; border:1px solid transparent; }
@@ -641,22 +576,18 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
 .step.active{ background:#f1f5f9; }
 .idx{ width:22px; text-align:right; opacity:.6; }
 
-/* viewer */
 .title{ font-size: clamp(22px, 2vw + 6px, 34px); font-weight:800; margin:0 0 10px; }
 .muted,.cmt-meta{ color:#64748b; }
 .viewer{ margin-top:8px; }
 
-/* dropdown */
 .actions-menu{ position:relative; }
 .actions-menu .dropdown{ position:absolute; right:0; top:42px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,.08); min-width:220px; padding:6px; z-index:30; }
 .actions-menu .dropdown button{ font-weight:600; font-size:14.5px; color:#0f172a; background:#fff; border:0; width:100%; text-align:left; padding:10px 12px; border-radius:10px; cursor:pointer; }
 .actions-menu .dropdown button:hover{ background:#f1f5f9; }
 
-/* inputs */
 .input,.textarea{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; outline:none; }
 .textarea{ min-height:90px; resize:vertical; }
 
-/* mobile drawer */
 .mobile-top{ display:none; align-items:center; gap:10px; margin:4px 0 10px; }
 .hamburger{ display:none; border:1px solid #e2e8f0; background:#fff; border-radius:10px; padding:8px; }
 .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:1000; display:none; }
@@ -805,7 +736,6 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                 current.title || "Material"
               }`}</h1>
 
-              {/* TEXT (optional) */}
               {current.text && (
                 <section
                   style={{
@@ -818,7 +748,6 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                 </section>
               )}
 
-              {/* VIDEO (optional) */}
               {current.videoUrl && (
                 <section style={{ margin: "16px 0" }}>
                   <div style={{ aspectRatio: "16 / 9", width: "100%" }}>
@@ -839,7 +768,6 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                 </section>
               )}
 
-              {/* FILE (optional) */}
               {current.fileUrl && (
                 <section style={{ marginTop: 16 }}>
                   <FileViewer
