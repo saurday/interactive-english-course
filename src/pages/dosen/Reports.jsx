@@ -2,20 +2,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  Home,
-  SettingsIcon,
-  LogOut,
-  Menu,
-  Users2,
-  BookOpenCheck,
-  BookOpen,
-  BarChart2,
-} from "lucide-react";
+   Home,
+   Settings,      // <-- ganti SettingsIcon -> Settings
+   LogOut,
+   Menu,
+   Users2,
+   BookOpenCheck, // kalau error, ganti pakai BookOpen
+   BookOpen,
+   BarChart2,
+ } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const STUDENTS_URL = (cid) => `${BASE_URL}/api/kelas/${cid}/students`;
-const REPORT_URL = (cid, sid) =>
-  `${BASE_URL}/api/kelas/${cid}/reports?student_id=${sid}`;
+import { get } from "@/config/api";
 
 /* -------------------- helpers -------------------- */
 const getUserId = () => {
@@ -28,17 +25,10 @@ const getUserId = () => {
   }
 };
 
-const headersAuth = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  Accept: "application/json",
-});
-
 /** Ambil semua kelas, lalu filter hanya yang dosen_id = user saat ini */
 async function fetchLecturerClasses() {
   try {
-    const r = await fetch(`${BASE_URL}/api/kelas`, { headers: headersAuth() });
-    if (!r.ok) throw new Error(`Failed to fetch classes (${r.status})`);
-    const json = await r.json();
+    const json = await get(`/kelas`);
 
     const me = getUserId();
     const raw = Array.isArray(json) ? json : json.data || json.list || [];
@@ -61,24 +51,14 @@ async function fetchLecturerClasses() {
   }
 }
 
-/** Ambil weeks/resources untuk hitung total materi per kelas (untuk persentase) */
 async function fetchWeeksForClass(classId) {
   try {
-    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-      headers: headersAuth(),
-    });
-    if (!r.ok) {
-      if (r.status === 404) return { totalResources: 0 };
-      throw new Error(`Failed weeks (${r.status})`);
-    }
-    const data = await r.json();
+    const data = await get(`/kelas/${classId}/weeks`);
     const weeksArr = Array.isArray(data) ? data : data.weeks || [];
-
     let count = 0;
     weeksArr.forEach((w) => {
       if (Array.isArray(w.resources)) count += w.resources.length;
     });
-
     return { totalResources: count };
   } catch (err) {
     console.error("fetchWeeksForClass()", err);
@@ -89,21 +69,14 @@ async function fetchWeeksForClass(classId) {
 /** Ambil mahasiswa dalam kelas */
 async function fetchClassStudents(classId) {
   try {
-    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/students`, {
-      headers: headersAuth(),
-    });
-    if (!r.ok) throw new Error(`Failed students (${r.status})`);
-    const j = await r.json();
+    const j = await get(`/kelas/${classId}/students`);
     const arr = Array.isArray(j) ? j : j.students || j.data || j.list || [];
-
     return arr.map((s, i) => {
       const userId =
         s.user_id ?? s.mahasiswa_id ?? s.user?.id ?? s.id ?? `row-${i}`;
-
       return {
-        // gunakan userId ini utk report
-        id: userId,
-        pivotId: s.id ?? null, // kalau butuh id pivot
+        id: userId, // untuk report
+        pivotId: s.id ?? null,
         name:
           s.full_name ||
           s.nama_lengkap ||
@@ -123,66 +96,55 @@ async function fetchClassStudents(classId) {
 
 /** Ambil ringkasan progres/scores 1 mahasiswa dalam kelas */
 async function fetchStudentReport(classId, studentId) {
-  const h = headersAuth();
-
-  // Kandidat endpoint: /api/kelas/{id}/students/{sid}/report
+  // 1) coba endpoint: /kelas/{id}/students/{sid}/report
   try {
-    const r1 = await fetch(
-      `${BASE_URL}/api/kelas/${classId}/students/${studentId}/report`,
-      { headers: h }
-    );
-    if (r1.ok) {
-      const j = await r1.json();
+    const j1 = await get(
+      `/kelas/${classId}/students/${studentId}/report`
+    ).catch(() => null);
 
-      // --- BACA RESPONS BACKEND MU SAAT INI ---
-      if (j?.totals) {
+    if (j1) {
+      if (j1?.totals) {
         return {
-          completed: Number(j.totals.completed ?? 0),
-          total: Number(j.totals.totalResources ?? 0),
+          completed: Number(j1.totals.completed ?? 0),
+          total: Number(j1.totals.totalResources ?? 0),
           avgScore:
-            j.avg_score ??
-            j.average_score ??
-            (typeof j.score === "number" ? j.score : null),
+            j1.avg_score ??
+            j1.average_score ??
+            (typeof j1.score === "number" ? j1.score : null),
         };
       }
-
-      // fallback kalau suatu saat respons diubah ke flat
+      // fallback bentuk flat
       return {
-        completed: Number(j.completed ?? j.total_completed ?? 0),
-        total: Number(j.total ?? j.total_resources ?? j.total_items ?? 0),
+        completed: Number(j1.completed ?? j1.total_completed ?? 0),
+        total: Number(j1.total ?? j1.total_resources ?? j1.total_items ?? 0),
         avgScore:
-          j.avg_score ??
-          j.average_score ??
-          (typeof j.score === "number" ? j.score : null),
+          j1.avg_score ??
+          j1.average_score ??
+          (typeof j1.score === "number" ? j1.score : null),
       };
     }
   } catch (err) {
     console.error("report endpoint #1", err);
   }
 
-  // Kandidat endpoint: /api/kelas/{id}/reports?student_id=...
+  // 2) fallback endpoint: /kelas/{id}/reports?student_id=...
   try {
-    const r2 = await fetch(
-      `${BASE_URL}/api/kelas/${classId}/reports?student_id=${studentId}`,
-      { headers: h }
-    );
-    if (r2.ok) {
-      const j = await r2.json();
+    const j2 = await get(
+      `/kelas/${classId}/reports?student_id=${studentId}`
+    ).catch(() => null);
 
-      // --- BACA RESPONS BACKEND MU SAAT INI ---
-      if (j?.totals) {
+    if (j2) {
+      if (j2?.totals) {
         return {
-          completed: Number(j.totals.completed ?? 0),
-          total: Number(j.totals.totalResources ?? 0),
+          completed: Number(j2.totals.completed ?? 0),
+          total: Number(j2.totals.totalResources ?? 0),
           avgScore:
-            j.avg_score ??
-            j.average_score ??
-            (typeof j.score === "number" ? j.score : null),
+            j2.avg_score ??
+            j2.average_score ??
+            (typeof j2.score === "number" ? j2.score : null),
         };
       }
-
-      // fallback bentuk lain
-      const data = j.report || j.data || j;
+      const data = j2.report || j2.data || j2;
       return {
         completed: Number(data.completed ?? data.total_completed ?? 0),
         total: Number(
@@ -198,7 +160,7 @@ async function fetchStudentReport(classId, studentId) {
     console.error("report endpoint #2", err);
   }
 
-  // Tidak ada data
+  // tidak ada data
   return { completed: 0, total: 0, avgScore: null };
 }
 
@@ -229,11 +191,7 @@ export default function Reports() {
       to: "/lecture/cefr",
     },
     { label: "Reports", icon: <BarChart2 size={18} />, to: "/lecture/reports" },
-    {
-      label: "Settings",
-      icon: <SettingsIcon size={18} />,
-      to: "/lecture/settings",
-    },
+    { label: "Settings", icon: <Settings size={18} />, to: "/lecture/settings" },
     { label: "Logout", icon: <LogOut size={18} />, action: "logout" },
   ];
   // meta viewport
@@ -458,7 +416,7 @@ thead th{ background:#fafafa; border-bottom:1px solid #e5e7eb; color:#334155; fo
               className="page-title"
               style={{ display: "flex", alignItems: "center", gap: 8 }}
             >
-              <BookOpenCheck size={22} /> Student Reports
+             <BookOpen size={22} /> Student Reports
             </h1>
             <div style={{ color: "#64748b" }}>
               View student progress and grades, grouped by class.{" "}
