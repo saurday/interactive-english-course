@@ -5,15 +5,14 @@ import {
   ChevronRight,
   MoreVertical,
   PlusCircle,
-  Pencil,
   Save,
   X,
   Menu,
-  Maximize2,
 } from "lucide-react";
 
 /* ================== Constants & Keys ================== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { get, post, put, del } from "@/config/api";
+
 const resKey = (classId) => `resources:${classId}`;
 const cmtKey = (classId, week) => `comments:${classId}:${week}`;
 
@@ -283,20 +282,14 @@ function FileViewer({ url, title = "File" }) {
 }
 
 /* ================== Data Fetchers ================== */
-const fetchWeeksForClass = async (classId, token) => {
+
+const fetchWeeksForClass = async (classId) => {
   try {
-    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
-
-    if (r.status === 404) return [];
-    if (!r.ok) throw new Error(`Failed to fetch weeks (${r.status})`);
-
-    const data = await r.json();
-    const weeksArr = Array.isArray(data) ? data : data.weeks || [];
+    const data = await get(`kelas/${classId}/weeks`);
+    const weeksArr = Array.isArray(data) ? data : data.weeks || data.data || [];
 
     const items = [];
-    weeksArr.forEach((w) => {
+    (weeksArr || []).forEach((w) => {
       const weekNo = w.week_number ?? w.week ?? null;
       if (Array.isArray(w.resources) && w.resources.length) {
         w.resources.forEach((res) => {
@@ -310,8 +303,8 @@ const fetchWeeksForClass = async (classId, token) => {
                 video_url: res.video_url,
                 file_url: res.file_url,
                 quiz_id: res.quiz_id,
-                assignment_id: res.assignment_id, // <—
-                assignment: res.assignment, // <—
+                assignment_id: res.assignment_id,
+                assignment: res.assignment,
                 week_number: weekNo ?? res.week_number,
                 week_id: res.week_id ?? w.id,
               },
@@ -326,17 +319,14 @@ const fetchWeeksForClass = async (classId, token) => {
 
     return items;
   } catch (err) {
+    if (err?.response?.status === 404) return [];
     console.error("fetchWeeksForClass error:", err);
     return [];
   }
 };
 
-async function fetchQuizDetail(quizId, token) {
-  const r = await fetch(`${BASE_URL}/api/quizzes/${quizId}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Quiz ${quizId} not found`);
-  const json = await r.json();
+async function fetchQuizDetail(quizId) {
+  const json = await get(`quizzes/${quizId}`);
   const q = json.data || json.quiz || json;
   return {
     id: q.id,
@@ -346,7 +336,6 @@ async function fetchQuizDetail(quizId, token) {
     shuffle: Boolean(q.shuffle ?? true),
     questions: (q.questions ?? []).map((qq) => ({
       id: qq.id,
-      // backend kirim "MULTIPLE_CHOICE" / "SHORT_ANSWER" → biarkan uppercase
       type: (qq.type || "").toUpperCase(),
       text: qq.question_text ?? qq.text ?? "",
       options: (qq.options ?? []).map((op) => ({
@@ -354,7 +343,6 @@ async function fetchQuizDetail(quizId, token) {
         text: op.option_text ?? op.text ?? "",
         isCorrect: Boolean(op.is_correct),
       })),
-      // kalau suatu saat short-answer punya daftar jawaban
       answers: Array.isArray(qq.answers) ? qq.answers : [],
     })),
   };
@@ -362,9 +350,8 @@ async function fetchQuizDetail(quizId, token) {
 
 /* ================== APIs (Resource & Comments) ================== */
 
-// createResourceAPI
-async function createResourceAPI(classId, weekOrId, payload, token) {
-  const weekParam = payload.weekId ?? weekOrId; // <-
+async function createResourceAPI(classId, weekOrId, payload) {
+  const weekParam = payload.weekId ?? weekOrId;
   const fd = new FormData();
   fd.append("type", "composite");
   fd.append("title", payload.title || "");
@@ -374,117 +361,51 @@ async function createResourceAPI(classId, weekOrId, payload, token) {
   if (payload.includeFile && payload.fileUrl)
     fd.append("file_url", payload.fileUrl);
 
-  const res = await fetch(`${BASE_URL}/api/weeks/${weekParam}/resources`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    body: fd,
-  });
-  if (!res.ok)
-    throw new Error(
-      `Create failed (${res.status}): ${await res.text().catch(() => "")}`
-    );
-  return res.json();
+  return await post(`weeks/${weekParam}/resources`, fd);
 }
 
-// updateResourceAPI
-async function updateResourceAPI(resourceId, payload, token) {
+async function updateResourceAPI(resourceId, payload) {
   const fd = new FormData();
   fd.append("_method", "PUT");
   fd.append("type", "composite");
   fd.append("title", payload.title || "");
-  // kirim hanya yang di-include
   fd.append("text", payload.includeText ? payload.text || "" : "");
   fd.append("video_url", payload.includeVideo ? payload.videoUrl || "" : "");
   if (payload.includeFile && payload.file) fd.append("file", payload.file);
-  // jika user memilih URL (atau mau bersihkan), tetap kirim file_url (bisa kosong)
   if (payload.includeFile) fd.append("file_url", payload.fileUrl || "");
 
-  const res = await fetch(`${BASE_URL}/api/course-resources/${resourceId}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    body: fd,
+  return await post(`course-resources/${resourceId}`, fd);
+}
+
+async function deleteResourceAPI(id) {
+  await del(`course-resources/${id}`);
+}
+
+async function fetchCommentsAPI(resourceId) {
+  const json = await get(`course-resources/${resourceId}/comments`);
+  return json?.comments || json?.data || json || [];
+}
+
+async function createCommentAPI(resourceId, text, parentId) {
+  const json = await post(`course-resources/${resourceId}/comments`, {
+    text,
+    parent_id: parentId || null,
   });
-  if (!res.ok)
-    throw new Error(
-      `Update failed (${res.status}): ${await res.text().catch(() => "")}`
-    );
-  return res.json();
+  return json.comment || json.data || json;
 }
 
-async function deleteResourceAPI(id, token) {
-  const r = await fetch(`${BASE_URL}/api/course-resources/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Delete failed (${r.status})`);
+async function updateCommentAPI(commentId, text) {
+  const json = await put(`comments/${commentId}`, { text });
+  return json.comment || json.data || json;
 }
 
-async function fetchCommentsAPI(resourceId, token) {
-  const res = await fetch(
-    `${BASE_URL}/api/course-resources/${resourceId}/comments`,
-    {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    }
-  );
-  if (!res.ok) throw new Error(`Load comments failed (${res.status})`);
-  const json = await res.json();
-  return json.comments || [];
+async function deleteCommentAPI(commentId) {
+  await del(`comments/${commentId}`);
 }
 
-async function createCommentAPI(resourceId, text, parentId, token) {
-  const res = await fetch(
-    `${BASE_URL}/api/course-resources/${resourceId}/comments`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ text, parent_id: parentId || null }),
-    }
-  );
-  if (!res.ok) throw new Error(`Post comment failed (${res.status})`);
-  const { comment } = await res.json();
-  return comment;
-}
-
-async function updateCommentAPI(commentId, text, token) {
-  const res = await fetch(`${BASE_URL}/api/comments/${commentId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) throw new Error(`Update comment failed (${res.status})`);
-  const { comment } = await res.json();
-  return comment;
-}
-
-async function deleteCommentAPI(commentId, token) {
-  const res = await fetch(`${BASE_URL}/api/comments/${commentId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!res.ok) throw new Error(`Delete comment failed (${res.status})`);
-}
-
-async function scoreCommentAPI(commentId, score, token) {
-  const res = await fetch(`${BASE_URL}/api/comments/${commentId}/score`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ score }),
-  });
-  if (!res.ok) throw new Error(`Score failed (${res.status})`);
-  const { comment } = await res.json();
-  return comment;
+async function scoreCommentAPI(commentId, score) {
+  const json = await put(`comments/${commentId}/score`, { score });
+  return json.comment || json.data || json;
 }
 
 /* ================== Edit Material Modal ================== */
@@ -1120,7 +1041,6 @@ export default function WeekDetail() {
   const params = useParams();
   const classId = params.id;
   const wk = params.weekNumber || params.weekId || params.week || params.number;
-  const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
 
   const [klass, setKlass] = useState(null);
@@ -1201,7 +1121,7 @@ export default function WeekDetail() {
       }
       try {
         setCLoading(true);
-        const list = await fetchCommentsAPI(current.id, token);
+        const list = await fetchCommentsAPI(current.id);
         setComments(list);
       } catch (e) {
         console.error(e);
@@ -1210,7 +1130,7 @@ export default function WeekDetail() {
         setCLoading(false);
       }
     })();
-  }, [current?.id, token]);
+  }, [current?.id]);
 
   /* ---------- Load quiz detail bila current.type === 'quiz' ---------- */
   useEffect(() => {
@@ -1236,7 +1156,7 @@ export default function WeekDetail() {
     (async () => {
       try {
         setQuizLoading(true);
-        const q = await fetchQuizDetail(qid, token);
+        const q = await fetchQuizDetail(qid);
         setQuizDetail(q);
       } catch (e) {
         console.error(e);
@@ -1245,22 +1165,17 @@ export default function WeekDetail() {
         setQuizLoading(false);
       }
     })();
-  }, [current, token]);
+  }, [current]);
 
   /* ---------- Load class & resources + cache ---------- */
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      // header kelas
+      // header kelas (axios wrapper)
       try {
-        const r = await fetch(`${BASE_URL}/api/kelas/${classId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (r.ok) setKlass(await r.json());
+        const kjson = await get(`kelas/${classId}`);
+        setKlass(kjson?.data || kjson); // fallback aman
       } catch (err) {
         console.error("Gagal memuat header kelas:", err);
       }
@@ -1291,7 +1206,7 @@ export default function WeekDetail() {
 
       // refetch fresh
       try {
-        const allItems = await fetchWeeksForClass(classId, token);
+        const allItems = await fetchWeeksForClass(classId);
         localStorage.setItem(resKey(classId), JSON.stringify(allItems));
         const fresh = allItems
           .filter((x) => Number(x.week) === Number(wk))
@@ -1315,7 +1230,7 @@ export default function WeekDetail() {
         setLoading(false);
       }
     })();
-  }, [classId, wk, token]);
+  }, [classId, wk]);
 
   /* ---------- Persist cache untuk week aktif ---------- */
   useEffect(() => {
@@ -1405,15 +1320,14 @@ export default function WeekDetail() {
       let saved;
 
       if (updated.id) {
-        const json = await updateResourceAPI(updated.id, updated, token);
+        const json = await updateResourceAPI(updated.id, updated);
         saved = normalizeResource(json, updated.week);
       } else {
         // ↓↓↓ PAKAI INI
         const json = await createResourceAPI(
           classId,
           updated.weekId ?? updated.week, // <-- weekId (fallback week number)
-          updated,
-          token
+          updated
         );
         saved = normalizeResource(json, updated.week);
       }
@@ -1462,7 +1376,7 @@ export default function WeekDetail() {
     if (!cur?.id) return;
     try {
       setOverlay(true);
-      await deleteResourceAPI(cur.id, token);
+      await deleteResourceAPI(cur.id);
 
       setItems((prev) => {
         const next = prev.filter((x) => x.id !== cur.id);
@@ -1724,7 +1638,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                           setAddOpen(false);
                           const wid = weekIdForApi || wk;
                           navigate(
-                            `/lecture/classes/${classId}/weeks/${wk}/quiz/new?type=short&wid=${wid}`
+                            `/lecture/classes/${classId}/weeks/${wk}/assignment/new?wid=${wid}`
                           );
                         }}
                       >
@@ -2090,8 +2004,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                       const saved = await createCommentAPI(
                         current.id,
                         txt,
-                        null,
-                        token
+                        null
                       );
                       setComments((prev) => [...prev, saved]);
                       setNewText("");
@@ -2101,7 +2014,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   }}
                   updateComment={async (id, text, parentId = null) => {
                     try {
-                      const saved = await updateCommentAPI(id, text, token);
+                      const saved = await updateCommentAPI(id, text);
                       if (!parentId) {
                         setComments((list) =>
                           list.map((c) => (c.id === id ? saved : c))
@@ -2113,7 +2026,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                               ? c
                               : {
                                   ...c,
-                                  replies: c.replies.map((r) =>
+                                  replies: (c.replies || []).map((r) =>
                                     r.id === id ? saved : r
                                   ),
                                 }
@@ -2126,7 +2039,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   }}
                   deleteComment={async (id, parentId = null) => {
                     try {
-                      await deleteCommentAPI(id, token);
+                      await deleteCommentAPI(id);
                       if (!parentId) {
                         setComments((list) => list.filter((c) => c.id !== id));
                       } else {
@@ -2136,7 +2049,9 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                               ? c
                               : {
                                   ...c,
-                                  replies: c.replies.filter((r) => r.id !== id),
+                                  replies: (c.replies || []).filter(
+                                    (r) => r.id !== id
+                                  ),
                                 }
                           )
                         );
@@ -2152,14 +2067,13 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                       const saved = await createCommentAPI(
                         current.id,
                         t,
-                        parentId,
-                        token
+                        parentId
                       );
                       setComments((list) =>
                         list.map((c) =>
                           c.id !== parentId
                             ? c
-                            : { ...c, replies: [...c.replies, saved] }
+                            : { ...c, replies: [...(c.replies || []), saved] }
                         )
                       );
                     } catch (e) {
@@ -2174,18 +2088,14 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                       return;
                     }
                     try {
-                      const saved = await scoreCommentAPI(
-                        commentId,
-                        num,
-                        token
-                      );
+                      const saved = await scoreCommentAPI(commentId, num);
                       setComments((list) =>
                         list.map((c) =>
                           c.id === saved.id
                             ? saved
                             : {
                                 ...c,
-                                replies: c.replies.map((r) =>
+                                replies: (c.replies || []).map((r) =>
                                   r.id === saved.id ? saved : r
                                 ),
                               }
@@ -2234,7 +2144,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
           </div>
         </div>
       )}
-      + {/* Fullscreen overlay */}
+      {/* Fullscreen overlay */}
       {fs.open && (
         <div className="fs-wrap" onClick={closeFS}>
           <div className="fs-inner" onClick={(e) => e.stopPropagation()}>
