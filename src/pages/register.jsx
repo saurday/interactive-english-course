@@ -1,7 +1,7 @@
 // src/pages/Register.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { post, ApiError } from "@/config/api";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Register() {
@@ -43,29 +43,23 @@ export default function Register() {
     setLoading(true);
     setErrorMsg(null);
 
-    try {
-      await axios.post("http://127.0.0.1:8000/api/register", {
-        name: formData.fullName, // map ke 'name' backend
-        email: formData.email,
-        password: formData.password,
-        password_confirmation: formData.confirmPassword,
-        role: "mahasiswa",
-      });
+ try {
+      await post("/register", {
+     name: formData.fullName,
+     email: formData.email,
+     password: formData.password,
+     password_confirmation: formData.confirmPassword,
+     role: "mahasiswa",
+   });
 
       alert("Registration successful!");
-      navigate("/login");
+       navigate("/login");
     } catch (err) {
-      // Ambil pesan dari backend jika ada
-      const apiErr =
-        err?.response?.data?.message ||
-        err?.response?.data?.errors?.email ||
-        err?.response?.data?.errors?.name ||
-        err?.response?.data?.errors?.password;
-      setErrorMsg(
-        Array.isArray(apiErr)
-          ? apiErr.join(", ")
-          : apiErr || "Registrtion failed!"
-      );
+   // Tarik pesan validasi Laravel kalau ada
+   const data = err instanceof ApiError ? err.data : null;
+   const validationMsg =
+     data?.errors && Object.values(data.errors).flat().join(", ");
+   setErrorMsg(validationMsg || err?.message || "Registration failed!");
     } finally {
       setLoading(false);
     }
