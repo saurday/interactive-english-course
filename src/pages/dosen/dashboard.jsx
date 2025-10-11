@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Home,
   BookOpen,
@@ -26,6 +26,8 @@ const sidebarMenuDosen = [
 const CACHE_KEY = "classes_cache_dosen";
 
 export default function DosenDashboard() {
+  const didFetch = useRef(false);
+
   const navigate = useNavigate();
 
   // ===== STATE =====
@@ -44,7 +46,6 @@ export default function DosenDashboard() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
 
-
   // ===== Sync state + cache =====
   const syncCache = (next) => {
     setClasses(next);
@@ -57,31 +58,41 @@ export default function DosenDashboard() {
 
   // ===== Hydrate dari cache -> refresh dari server =====
   useEffect(() => {
-    // 1) tampilkan cache jika ada (biar instan)
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
         setClasses(Array.isArray(parsed) ? parsed : []);
       } catch {
-        /* ignore */
+        // ignore
       }
     }
 
-    // 2) refresh ke server
+    if (didFetch.current) return;
+    didFetch.current = true;
+
+    const ac = new AbortController();
+
     const load = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await get("/kelas");
+        // kalau wrapper get() mendukung signal
+        const data = await get("/kelas", { signal: ac.signal });
         syncCache(Array.isArray(data) ? data : []);
-     } catch (e) {
-   setError(e instanceof ApiError ? e.message : e?.message || "Failed to load classes");
+      } catch (e) {
+        if (e?.name === "CanceledError" || e?.name === "AbortError") return;
+        setError(
+          e instanceof ApiError
+            ? e.message
+            : e?.message || "Failed to load classes"
+        );
       } finally {
         setIsLoading(false);
       }
     };
     load();
+    return () => ac.abort();
   }, []);
 
   // Tutup dropdown kebab saat klik di luar / tekan ESC
@@ -128,10 +139,13 @@ export default function DosenDashboard() {
     setOpenMenu(null);
   };
 
-  // ===== SUBMIT CREATE / UPDATE =====
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const submitForm = async () => {
     const title = formTitle.trim();
-    if (!title) return;
+    if (!title || submitting) return; // guard
+    setSubmitting(true);
     try {
       if (formMode === "create") {
         const kelas = await post("/kelas", { nama_kelas: title });
@@ -139,7 +153,9 @@ export default function DosenDashboard() {
         syncCache(next);
         setNewClassCode(kelas.kode_kelas);
       } else {
-       const updated = await put(`/kelas/${editingClass.id}`, { nama_kelas: title });
+        const updated = await put(`/kelas/${editingClass.id}`, {
+          nama_kelas: title,
+        });
         const next = classes.map((c) =>
           c.id === editingClass.id ? updated : c
         );
@@ -150,17 +166,22 @@ export default function DosenDashboard() {
       alert(
         `${formMode === "create" ? "Create" : "Update"} error: ${err.message}`
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // ===== DELETE =====
   const handleDelete = async (id) => {
+    if (deleting) return; // guard
+    setDeleting(true);
     try {
       await del(`/kelas/${id}`);
       const next = classes.filter((c) => c.id !== id);
       syncCache(next);
     } catch (err) {
       alert("Error deleting class: " + err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -180,7 +201,6 @@ export default function DosenDashboard() {
       }
     }
     keys.forEach((k) => localStorage.removeItem(k));
-    localStorage.clear();
     navigate("/");
   };
 
@@ -513,8 +533,16 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                   >
                     Cancel
                   </button>
-                  <button className="btn" onClick={submitForm}>
-                    {formMode === "create" ? "Create" : "Update"}
+                  <button
+                    className="btn"
+                    onClick={submitForm}
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? "Saving..."
+                      : formMode === "create"
+                      ? "Create"
+                      : "Update"}
                   </button>
                 </div>
               </div>
@@ -564,8 +592,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                       setConfirmDeleteOpen(false);
                       setClassToDelete(null);
                     }}
+                    disabled={deleting}
                   >
-                    Delete
+                    {deleting ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>
