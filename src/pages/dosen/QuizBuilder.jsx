@@ -16,7 +16,7 @@ import {
   Shuffle,
 } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { get, post, put } from "@/config/api";
 
 // Toast sederhana
 function Toast({ open, text }) {
@@ -46,6 +46,16 @@ function Toast({ open, text }) {
       </div>
     </div>
   );
+}
+
+async function resolveWeekId(classId, weekNumber, widFromQuery) {
+  if (widFromQuery) return Number(widFromQuery);
+  const data = await get(`/kelas/${classId}/weeks`);
+  const arr = Array.isArray(data) ? data : data.weeks || [];
+  const w = arr.find(
+    (x) => Number(x.week_number ?? x.week) === Number(weekNumber)
+  );
+  return w?.id || null;
 }
 
 export default function QuizBuilder() {
@@ -115,14 +125,7 @@ export default function QuizBuilder() {
     if (!isEdit) return;
     (async () => {
       try {
-        const r = await fetch(`${BASE_URL}/api/quizzes/${quizId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!r.ok) throw new Error(`Load quiz failed (${r.status})`);
-        const json = await r.json();
+        const json = await get(`/quizzes/${quizId}`);
         const q = json.data || json.quiz || json;
 
         // meta
@@ -206,56 +209,32 @@ export default function QuizBuilder() {
           ),
         };
 
-        const r1 = await fetch(`${BASE_URL}/api/quizzes`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        if (!r1.ok)
-          throw new Error(
-            `Create quiz failed (${r1.status}) ${await r1
-              .text()
-              .catch(() => "")}`
-          );
-        const quizJson = await r1.json();
+        // create quiz
+        const quizJson = await post(`/quizzes`, payload);
         const createdQuiz = quizJson.quiz || quizJson;
         const newQuizId = createdQuiz.id;
 
-        // Buat CourseResource (type: quiz)
+        // create resource pada week
         const fd = new FormData();
         fd.append("type", "quiz");
         fd.append("title", meta.title || "");
         fd.append("quiz_id", String(newQuizId));
 
-        const r2 = await fetch(`${BASE_URL}/api/weeks/${weekId}/resources`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-          body: fd,
-        });
-        if (!r2.ok)
-          throw new Error(
-            `Create resource failed (${r2.status}) ${await r2
-              .text()
-              .catch(() => "")}`
-          );
+        const realWeekId = await resolveWeekId(classId, week, weekId);
+        if (!realWeekId) throw new Error("Week id tidak ditemukan");
+        const resJson = await post(`/weeks/${realWeekId}/resources`, fd);
+        const resource = resJson.resource || resJson || {};
 
-        // Cache ringan supaya sidebar WeekDetail langsung update (opsional)
+        // cache lokal
         try {
           const key = `resources:${classId}`;
           const raw = localStorage.getItem(key);
           const all = raw ? JSON.parse(raw) : [];
-          const resource = (await r2.json()).resource || {};
+
           const newItem = {
             id: resource.id,
             week: Number(week),
-            weekId: Number(resource.week_id || weekId),
+            weekId: Number(resource.week_id || realWeekId),
             type: "quiz",
             title: meta.title || `Quiz ${questions.length}`,
             quiz_id: newQuizId,
@@ -268,18 +247,18 @@ export default function QuizBuilder() {
               items: payload.items,
             },
           };
+
           const rest = (Array.isArray(all) ? all : []).filter(
             (x) => Number(x.id) !== Number(newItem.id)
           );
           localStorage.setItem(key, JSON.stringify([...rest, newItem]));
         } catch {
-          /* ignore */
+          /* ignore cache errors */
         }
 
         showToast("Quiz created");
       } else {
         // ========== UPDATE ==========
-        // payload versi update (pakai 'questions' + is_correct)
         const payload = {
           title: meta.title.trim(),
           instructions: meta.instructions || "",
@@ -311,21 +290,9 @@ export default function QuizBuilder() {
           ),
         };
 
-        const r = await fetch(`${BASE_URL}/api/quizzes/${quizId}`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        if (!r.ok)
-          throw new Error(
-            `Update failed (${r.status}) ${await r.text().catch(() => "")}`
-          );
+        await put(`/quizzes/${quizId}`, payload);
 
-        // segarkan cache lokal (opsional)
+        // update cache lokal: hanya update item resource quiz yang cocok
         try {
           const key = `resources:${classId}`;
           const raw = localStorage.getItem(key);
@@ -343,7 +310,7 @@ export default function QuizBuilder() {
                     instructions: meta.instructions,
                     time_limit: Number(meta.time_limit) || 0,
                     shuffle: !!meta.shuffle,
-                    // simpan bentuk "items" sederhana agar viewer bisa render cepat
+                    // simpan bentuk sederhana agar viewer cepat
                     items: questions.map((q) =>
                       q.type === "mcq"
                         ? {
@@ -367,7 +334,7 @@ export default function QuizBuilder() {
           );
           localStorage.setItem(key, JSON.stringify(next));
         } catch {
-          /* ignore */
+          /* ignore cache errors */
         }
 
         showToast("Quiz updated");
