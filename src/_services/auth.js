@@ -1,16 +1,34 @@
 // src/_services/auth.js
 import { API } from "@/_api";
-/**
- * Login ke backend.
- * Backend (AuthController) mengembalikan:
- * { success, message, access_token, token_type, user }
- */
-export const login = async ({ email, password }) => {
-  const { data } = await API.post("/login", { email, password });
-  // Kamu simpan ke localStorage di komponen (Login.jsx),
-  // jadi di sini cukup kembalikan data apa adanya:
-  return data;
-};
+// src/_services/auth.js
+const BASE = import.meta.env.VITE_API_BASE_URL; // tanpa trailing slash
+
+export async function login(email, password) {
+  const res = await fetch(`${BASE}/api/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    let msg = 'Login failed';
+    try {
+      const j = await res.json();
+      msg =
+        j.message ||
+        (j.errors && Object.values(j.errors)[0]?.[0]) ||
+        msg;
+    } catch {
+      msg = (await res.text()) || msg;
+    }
+    throw new Error(msg);
+  }
+  return res.json(); // { access_token, user, ... }
+}
+
 
 export const register = async (payload) => {
   const { data } = await API.post("/register", payload);
