@@ -39,7 +39,7 @@ function stripCode(name = "", code = "") {
 
 // Coba beberapa endpoint; fallback ke STATIC_CEFR bila gagal/kosong
 async function fetchLevels(token) {
-  const tries = [`${BASE_URL}/api/cefr-levels`, `${BASE_URL}/api/cefr/levels`];
+  const tries = [`${BASE_URL}/api/cefr-levels`, `${BASE_URL}/api/cefr-levels`];
   for (const url of tries) {
     try {
       const r = await fetch(url, {
