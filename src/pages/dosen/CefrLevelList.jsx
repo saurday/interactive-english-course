@@ -1,8 +1,8 @@
 // src/pages/lecture/CefrLevelList.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Home, BookOpen, Settings, LogOut, Menu, BarChart2 } from "lucide-react";
-import { get } from "@/config/api"; // gunakan axios wrapper yang sudah handle baseURL/token
+import { get } from "@/config/api"; // ← gunakan api wrapper, jangan rakit URL manual
 
 const sidebarMenuDosen = [
   { label: "Dashboard", icon: <Home size={18} />, to: "/lecture", end: true },
@@ -21,19 +21,22 @@ const STATIC_CEFR = [
   { code: "C2", name: "Proficient", desc: "Proficient user" },
 ];
 
-// hapus "A1 ", "A2 -", dst di depan nama
+// hapus awalan kode di judul (mis. "A1 - Beginner" → "Beginner")
 function stripCode(name = "", code = "") {
   if (!name) return name;
   const re = new RegExp(`^\\s*${code}\\s*[-:]?\\s*`, "i");
   return name.replace(re, "").trim();
 }
 
-// Ambil level; 404/kosong -> fallback STATIC_CEFR (tanpa melempar error)
-async function fetchLevelsSafe() {
+// ambil daftar level via api wrapper (menghindari double /api)
+async function fetchLevels() {
   try {
-    const res = await get("cefr-levels"); // baseURL dari axios wrapper akan menambahkan /api jika diset
-    const arr = Array.isArray(res) ? res : res.levels || res.data || [];
-    const normalized = (arr || [])
+    const j = await get("cefr-levels"); // ← cukup path relatif
+    const arr = Array.isArray(j) ? j : j.levels || j.data || [];
+
+    if (!Array.isArray(arr) || arr.length === 0) return STATIC_CEFR;
+
+    return arr
       .map((x) => ({
         id: x.id,
         code:
@@ -44,11 +47,7 @@ async function fetchLevelsSafe() {
         desc: x.description || x.desc || "",
       }))
       .filter((x) => x.code);
-    return normalized.length ? normalized : STATIC_CEFR;
-  } catch (e) {
-    const status = e?.status || e?.response?.status;
-    if (status === 404) return STATIC_CEFR; // treat 404 as empty
-    // Untuk menjaga console tetap bersih saat dev, fallback juga
+  } catch {
     return STATIC_CEFR;
   }
 }
@@ -59,16 +58,11 @@ export default function CefrLevelList() {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Guard agar tidak double fetch di React StrictMode (dev)
-  const once = useRef(false);
   useEffect(() => {
-    if (once.current) return;
-    once.current = true;
-
     (async () => {
       setLoading(true);
-      const data = await fetchLevelsSafe();
-      setLevels(data);
+      const data = await fetchLevels();
+      setLevels(data.length ? data : STATIC_CEFR);
       setLoading(false);
     })();
   }, []);
