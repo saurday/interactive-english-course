@@ -199,6 +199,8 @@ body { background:#fbfbfb; }
   padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px;
   border-bottom-left-radius:14px; border-bottom-right-radius:14px;
 }
+.qtitle{ white-space: pre-line; }
+
 .tleft{
   font-weight:800; 
 }
