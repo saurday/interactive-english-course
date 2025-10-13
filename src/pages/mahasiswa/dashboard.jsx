@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { BASE_URL } from "@/config/api"; // ✅ gunakan config terpusat
+
 const CACHE_KEY = "classes_cache_mhs";
 const getUserId = () => {
   try {
@@ -34,12 +35,10 @@ const sidebarMenu = [
   },
   { label: "Settings", icon: <Settings size={18} />, to: "/student/settings" },
   { label: "Logout", icon: <LogOut size={18} /> },
-  // { label: "Lesson", icon: <BookOpenText size={20} /> },
-  // { label: "Task", icon: <CalendarCheck2 size={20} /> },
 ];
 
 async function fetchPlacementState(token) {
-  const r = await fetch(`${BASE_URL}/api/placement/state`, {
+  const r = await fetch(`${BASE_URL}/placement/state`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   if (!r.ok) throw new Error(`Failed to load state (${r.status})`);
@@ -53,7 +52,7 @@ async function fetchPlacementState(token) {
 
 export default function MahasiswaDashboard() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token") || ""; // ← move up here
+  const token = localStorage.getItem("token") || "";
 
   const [placement, setPlacement] = useState({ loading: true, taken: false });
 
@@ -76,7 +75,7 @@ export default function MahasiswaDashboard() {
   }, [token]);
 
   async function startPlacement() {
-    const r = await fetch(`${BASE_URL}/api/placement/start`, {
+    const r = await fetch(`${BASE_URL}/placement/start`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     });
@@ -123,7 +122,7 @@ export default function MahasiswaDashboard() {
     try {
       setIsLoading(true);
       setErr(null);
-      const res = await fetch(`${BASE_URL}/api/kelas`, {
+      const res = await fetch(`${BASE_URL}/kelas`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -150,7 +149,7 @@ export default function MahasiswaDashboard() {
   const fetchWeeks = async (classId) => {
     if (!classId) return setWeeks([]);
     try {
-      const res = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
+      const res = await fetch(`${BASE_URL}/kelas/${classId}/weeks`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
@@ -241,7 +240,7 @@ export default function MahasiswaDashboard() {
     if (!code) return;
     try {
       setJoining(true);
-      const res = await fetch(`${BASE_URL}/api/kelas/join`, {
+      const res = await fetch(`${BASE_URL}/kelas/join`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -274,7 +273,7 @@ export default function MahasiswaDashboard() {
     return Math.round((done / resources.length) * 100);
   };
 
-  const hasClass = classes.length > 0;
+  // const hasClass = classes.length > 0;
 
   return (
     <>
@@ -284,17 +283,15 @@ export default function MahasiswaDashboard() {
       </style>
 
       <style>{`
-
  :root { 
   --sbw: 240px; 
   --violet:#6b46c1; 
   --violet-700:#553c9a; 
-  --primary: var(--violet);   /* supaya rule :hover yang pakai --primary hidup */
+  --primary: var(--violet);
 }
 body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#fbfbfb; }
 
 /* ====== Layout ====== */
-/* container yang punya kedua class: mhs-dash + container */
 .mhs-dash{
    display:flex;
    min-height:100vh;
@@ -303,7 +300,6 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
    margin-left: 0 !important;
 }
 
-/* content override agar tidak kena max-width global halaman lain */
 .mhs-dash .content{
   flex: 1 1 auto;
   width: 100%;
@@ -312,39 +308,26 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
   padding: 20px clamp(12px, 2vw, 24px);
 }
 
-/* grid fleksibel */
 .mhs-dash .grid{
   display:grid;
   gap:16px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
-
-/* grid yang fleksibel mengikuti lebar layar */
-.mhs-dash .grid{
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
 .sidebar {
   width: var(--sbw);
   background:#fff; border-right:1px solid #e2e8f0;
   padding:16px; position:sticky; top:0; height:100vh;
 }
-/* semula: max-width:1200px; margin:0 auto; */
 .content{
   flex: 1;
   width: 100%;
   max-width: none;
   margin: 0;
-
-  /* sisi kiri/kanan + atas normal */
   padding-inline: clamp(14px, 4vw, 28px);
   padding-top: clamp(12px, 2.6vw, 24px);
-
   padding-bottom: max(clamp(28px, 6vh, 96px), env(safe-area-inset-bottom));
 }
-
 
 .title { font-size: clamp(18px, 2.2vw + 6px, 20px); font-weight:800; color:#1f2937; margin:0 0 12px; }
 .muted { color:#64748b; }
@@ -381,7 +364,7 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
 .menu-item:hover,
 .menu-item.active{
   background:#f3f0ff;
-  color:var(--primary); /* --primary sudah kamu set ke --violet */
+  color:var(--primary);
 }
 
 button.menu-item{
@@ -403,19 +386,18 @@ button.menu-item{
 .backdrop.show{ display:block; }
 
 @media (max-width:1100px){
-
   .sidebar{
     position: fixed; left:0; top:0; bottom:0; height:auto;
     width: 86vw; max-width: 320px; transform: translateX(-100%);
     transition: transform .25s ease; z-index: 1001; overflow:auto;
   }
   .sidebar.open{ transform: translateX(0); }
-.content{
-  max-width:100%;
-  padding-inline: 12px;
-  padding-top: 12px;
-  padding-bottom: max(56px, env(safe-area-inset-bottom));
-}
+  .content{
+    max-width:100%;
+    padding-inline: 12px;
+    padding-top: 12px;
+    padding-bottom: max(56px, env(safe-area-inset-bottom));
+  }
   .mobile-top{ display:flex; }
   .hamburger{ display:inline-flex; }
 }
@@ -435,11 +417,10 @@ button.menu-item{
   background: radial-gradient(1200px 400px at 80% -20%, rgba(255,255,255,.25), transparent 60%), var(--violet);
   color:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 28px rgba(0,0,0,.15);
 }
-.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 10px); font-weight:800; }
+.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 24px); font-weight:800; }
 .hero p{ margin:0 0 10px; opacity:.98; }
 
 /* ====== Weeks grid ====== */
-/* ganti semua rule .grid + media query-nya dengan ini */
 .grid{
   display: grid;
   gap: 16px;
@@ -484,7 +465,7 @@ button.menu-item{
                 onClick={() => {
                   setActiveMenu(label);
                   setSideOpen(false);
-                  if (to) navigate(to); // <-- pindah halaman
+                  if (to) navigate(to);
                 }}
               >
                 {icon} {label}
@@ -571,7 +552,7 @@ button.menu-item{
             <div className="muted">Loading…</div>
           ) : err ? (
             <div style={{ color: "#dc2626" }}>{err}</div>
-          ) : !hasClass ? (
+          ) : classes.length === 0 ? (
             <div className="week-card" style={{ padding: 18 }}>
               <div style={{ fontWeight: 800, marginBottom: 6 }}>
                 You are not yet enrolled in a class
@@ -723,4 +704,3 @@ button.menu-item{
     </>
   );
 }
-
