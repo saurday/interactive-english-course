@@ -1,13 +1,12 @@
+// src/pages/mahasiswa/ReviewPage.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+import { get, ApiError } from "@/config/api";
 
 export default function ReviewPage() {
   const { classId, week } = useParams();
   const [sp] = useSearchParams();
   const aid = sp.get("aid");
-  const token = localStorage.getItem("token") || "";
 
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -18,27 +17,25 @@ export default function ReviewPage() {
       return;
     }
 
-    const load = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const r = await fetch(`${BASE_URL}/api/attempts/${aid}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!r.ok) {
-          setErr(`Failed to fetch review (HTTP ${r.status})`);
-          return;
+        // ✅ GET /attempts/:attempt
+        const json = await get(`/attempts/${aid}`);
+        if (!cancelled) setData(json);
+      } catch (e) {
+        if (e instanceof ApiError) {
+          setErr(`Failed to fetch review (HTTP ${e.status})`);
+        } else {
+          setErr("Network error");
         }
-        const json = await r.json();
-        setData(json);
-      } catch {
-        setErr("Network error");
       }
-    };
+    })();
 
-    load();
-  }, [aid, token]);
+    return () => {
+      cancelled = true;
+    };
+  }, [aid]);
 
   if (err) return <div style={{ padding: 20 }}>{err}</div>;
   if (!data) return <div style={{ padding: 20 }}>Loading review…</div>;
@@ -55,9 +52,7 @@ export default function ReviewPage() {
       }}
     >
       <div style={{ marginBottom: 12 }}>
-        <Link to={`/student/classes/${classId}/weeks/${week}`}>
-          ← Back to Week
-        </Link>
+        <Link to={`/student/classes/${classId}/weeks/${week}`}>← Back to Week</Link>
       </div>
 
       <h1 style={{ fontWeight: 800, marginBottom: 4 }}>
@@ -70,6 +65,8 @@ export default function ReviewPage() {
       <ol style={{ paddingLeft: 18, display: "grid", gap: 14 }}>
         {(data.quiz?.questions || []).map((q, idx) => {
           const row = ansMap.get(q.id);
+          const options = q.options || [];
+
           return (
             <li
               key={q.id}
@@ -80,39 +77,61 @@ export default function ReviewPage() {
               }}
             >
               <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                {idx + 1}. {q.question_text}
+                {idx + 1}. {q.question_text || q.text}
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {(q.options || []).map((op) => {
-                  const isChosen = row?.option_id === op.id;
-                  const correct = !!op.is_correct;
-                  return (
-                    <li key={op.id} style={{ lineHeight: 1.7 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: 10,
-                          height: 10,
-                          borderRadius: 999,
-                          background: correct ? "#16a34a" : "#e5e7eb",
-                          marginRight: 8,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontWeight: isChosen ? 700 : 400,
-                          textDecoration:
-                            isChosen && !correct ? "line-through" : "none",
-                          color: isChosen && !correct ? "#b91c1c" : "inherit",
-                        }}
-                      >
-                        {op.option_text}
-                        {isChosen ? "  (your choice)" : ""}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+
+              {options.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {options.map((op) => {
+                    const isChosen = String(row?.option_id ?? "") === String(op.id);
+                    const correct =
+                      op.is_correct === true || op.correct === true;
+                    const label = op.option_text ?? op.text;
+
+                    return (
+                      <li key={op.id} style={{ lineHeight: 1.7 }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: 10,
+                            height: 10,
+                            borderRadius: 999,
+                            background: correct ? "#16a34a" : "#e5e7eb",
+                            marginRight: 8,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontWeight: isChosen ? 700 : 400,
+                            textDecoration:
+                              isChosen && !correct ? "line-through" : "none",
+                            color: isChosen && !correct ? "#b91c1c" : "inherit",
+                          }}
+                        >
+                          {label}
+                          {isChosen ? "  (your choice)" : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div style={{ marginTop: 6 }}>
+                  <span
+                    style={{
+                      color: "#64748b",
+                      fontStyle: "italic",
+                      background: "#f8fafc",
+                      border: "1px dashed #e5e7eb",
+                      padding: "4px 8px",
+                      borderRadius: 8,
+                      display: "inline-block",
+                    }}
+                  >
+                    {row?.text_answer ? `Your answer: ${row.text_answer}` : "No answer"}
+                  </span>
+                </div>
+              )}
             </li>
           );
         })}
