@@ -8,14 +8,7 @@ import {
   Menu,
   BookOpenText,
 } from "lucide-react";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
+import { get, put, ApiError } from "@/config/api"; // ✅ pakai wrapper api
 
 const getMe = () => {
   try {
@@ -52,15 +45,16 @@ export default function StudentSettings() {
       setErr("");
       setLoading(true);
       try {
-        const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(`Failed to load profile (${r.status})`);
-        const j = await r.json(); // controller mengembalikan objek user langsung
+        // ✅ GET /users/:id (wrapper sudah handle baseURL + /api + Bearer)
+        const j = await get(`/users/${userId}`);
         setName(j.name || "");
         setEmail(j.email || "");
       } catch (e) {
-        setErr(e?.message || "Failed to load profile");
+        setErr(
+          e instanceof ApiError
+            ? `Failed to load profile (${e.status})`
+            : e?.message || "Failed to load profile"
+        );
       } finally {
         setLoading(false);
       }
@@ -78,32 +72,29 @@ export default function StudentSettings() {
         payload.password = password;
         payload.password_confirmation = passwordConfirmation;
       }
-      const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const j = await r.json();
-      if (!r.ok) {
-        throw new Error(j?.message || "Failed to update profile");
-      }
-      // Simpan user terbaru ke localStorage (supaya header/nama dsb ikut terbarui)
+
+      // ✅ PUT /users/:id
+      const updated = await put(`/users/${userId}`, payload);
+
+      // simpan user terbaru ke localStorage
       try {
-        const u = {
-          ...JSON.parse(localStorage.getItem("userInfo") || "{}"),
-          ...j,
-        };
-        localStorage.setItem("userInfo", JSON.stringify(u));
+        const prev = JSON.parse(localStorage.getItem("userInfo") || "{}");
+        localStorage.setItem("userInfo", JSON.stringify({ ...prev, ...updated }));
       } catch {
         /* ignore */
       }
-      // Kosongkan field password
+
+      // reset field password
       setCurrentPassword("");
       setPassword("");
       setPasswordConfirmation("");
       alert("Profile updated");
     } catch (e) {
-      setErr(e?.message || "Failed to update profile");
+      setErr(
+        e instanceof ApiError
+          ? e.message || `Failed to update profile (${e.status})`
+          : e?.message || "Failed to update profile"
+      );
     } finally {
       setSaving(false);
     }
@@ -118,7 +109,7 @@ export default function StudentSettings() {
     <>
       <style>{`
 :root{
-  --primary:#7c3aed; --ink:#111827; --muted:#64748b; --bg:#f8f7ff;
+  --primary:#7c3aed; --ink:#111827; --muted:#64748b; --bg:#f8f7ff; --sbw:240px;
 }
 *{box-sizing:border-box}
 html,body,#root{height:100%}
@@ -158,7 +149,7 @@ body{margin:0; font-family:'Inter','Poppins',system-ui,-apple-system,'Segoe UI',
 .menu-item:hover,
 .menu-item.active{
   background:#f3f0ff;
-  color:var(--primary); /* --primary sudah kamu set ke --violet */
+  color:var(--primary);
 }
 
 button.menu-item{
@@ -180,7 +171,7 @@ button.menu-item{
 .btn-primary:hover{background:#553c9a}
 .error{color:#dc2626; margin-bottom:10px}
 @media (max-width:640px){
-  .sidebar{position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .25s ease}
+  .sidebar{position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .25s ease; z-index: 50;}
   .sidebar.open{transform:translateX(0)}
   .hamburger{display:inline-flex}
   .content{padding:10px 12px 90px}
