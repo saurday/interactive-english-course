@@ -2,30 +2,24 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronRight, CheckCircle2 } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ✅ Pakai wrapper API (anti-double /api)
+import { get, post, ApiError } from "@/config/api";
 
-/* ================= API ================= */
-async function fetchPlacementState(token) {
-  const r = await fetch(`${BASE_URL}/api/placement/state`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Failed to load state (${r.status})`);
-  return r.json();
+/* ================= API (via wrapper) ================= */
+async function fetchPlacementState() {
+  // GET /placement/state
+  return get(`/placement/state`);
 }
-async function fetchLevelByCode(code, token) {
-  const r = await fetch(`${BASE_URL}/api/cefr-levels/by-code/${code}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) throw new Error(`Level ${code} not found`);
-  const j = await r.json();
+
+async function fetchLevelByCode(code) {
+  // GET /cefr-levels/by-code/:code
+  const j = await get(`/cefr-levels/by-code/${code}`);
   return j.level || j.data || j;
 }
-async function fetchCefrResources(levelId, token) {
-  const r = await fetch(`${BASE_URL}/api/cefr-levels/${levelId}/resources`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  if (!r.ok) return [];
-  const j = await r.json();
+
+async function fetchCefrResources(levelId) {
+  // GET /cefr-levels/:id/resources
+  const j = await get(`/cefr-levels/${levelId}/resources`);
   const arr = Array.isArray(j) ? j : j.resources || j.data || [];
   return arr.map((k) => ({
     id: k.id,
@@ -81,16 +75,14 @@ function toYouTubeEmbed(raw) {
       if (v) return `https://www.youtube.com/embed/${v}`;
       if (u.pathname.startsWith("/embed/")) return raw;
       const parts = u.pathname.split("/").filter(Boolean);
-      if (parts[0] === "shorts" && parts[1])
-        return `https://www.youtube.com/embed/${parts[1]}`;
+      if (parts[0] === "shorts" && parts[1]) return `https://www.youtube.com/embed/${parts[1]}`;
     }
   } catch {
-    /* ignore */
+    // ignore URL parsing errors
   }
   return raw;
 }
-const buildEmbedUrl = (url) =>
-  !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
+const buildEmbedUrl = (url) => (!url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url);
 
 function prepareEmbedSrc(rawUrl) {
   const url = String(rawUrl || "");
@@ -99,10 +91,7 @@ function prepareEmbedSrc(rawUrl) {
   if (url.includes("docs.google.com/presentation")) {
     let src = url;
     if (/(\/edit|\/present)/.test(src)) {
-      src = src.replace(
-        /\/(edit|present).*$/,
-        "/embed?start=false&loop=false&delayms=3000"
-      );
+      src = src.replace(/\/(edit|present).*$/, "/embed?start=false&loop=false&delayms=3000");
     }
     if (/\/pub(\?|$)/.test(src)) {
       src = src.replace(/\/pub(\?|$)/, "/embed?");
@@ -135,13 +124,10 @@ function prepareEmbedSrc(rawUrl) {
     return { type: "image", src: url, open: url };
   if (["mp4", "webm", "ogg", "m3u8"].includes(ext))
     return { type: "video", src: url, open: url };
-  if (["mp3", "wav", "oga", "ogg"].includes(ext))
-    return { type: "audio", src: url, open: url };
+  if (["mp3", "wav", "oga", "ogg"].includes(ext)) return { type: "audio", src: url, open: url };
   if (ext === "pdf") return { type: "iframe", src: url, open: url };
   if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
-    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-      url
-    )}`;
+    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     return { type: "iframe", src: office, open: url };
   }
   return { type: "iframe", src: url, open: url };
@@ -176,7 +162,6 @@ function FileViewer({ url, title = "File" }) {
 
 /* ================= Page ================= */
 export default function CefrModules() {
-  const token = localStorage.getItem("token") || "";
   const navigate = useNavigate();
 
   const [placement, setPlacement] = useState({ loading: true });
@@ -193,7 +178,7 @@ export default function CefrModules() {
     let alive = true;
     (async () => {
       try {
-        const st = await fetchPlacementState(token);
+        const st = await fetchPlacementState();
         if (!alive) return;
         setPlacement({ loading: false, ...st });
       } catch {
@@ -202,7 +187,7 @@ export default function CefrModules() {
       }
     })();
     return () => (alive = false);
-  }, [token]);
+  }, []);
 
   // level + resources
   useEffect(() => {
@@ -214,13 +199,13 @@ export default function CefrModules() {
     (async () => {
       try {
         setLoadingRes(true);
-        const info = await fetchLevelByCode(code, token);
+        const info = await fetchLevelByCode(code);
         if (!alive) return;
         const id = info?.id || latest?.level_id;
         setLevelInfo(info || { code });
         setLevelId(id);
 
-        const items = await fetchCefrResources(id, token);
+        const items = await fetchCefrResources(id);
         if (!alive) return;
         setResources(items);
         setActive(0);
@@ -235,7 +220,7 @@ export default function CefrModules() {
     })();
     return () => (alive = false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placement?.latest, token]);
+  }, [placement?.latest]);
 
   // toggle complete (localStorage)
   const current = resources[active] || null;
@@ -305,19 +290,19 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
 
   const startPlacement = async () => {
     try {
-      const r = await fetch(`${BASE_URL}/api/placement/start`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      if (!r.ok) {
-        const msg = await r.text().catch(() => "");
-        alert(msg || "You cannot take the test right now.");
-        return;
-      }
-      const { attempt } = await r.json();
+      // ✅ wrapper post
+      const { attempt } = await post(`/placement/start`, {});
       navigate(`/student/placement-test?aid=${attempt.id}`);
-    } catch {
-      alert("Unable to start the test right now.");
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const msg =
+          (typeof e.data === "string" && e.data) ||
+          e.data?.message ||
+          "You cannot take the test right now.";
+        alert(msg);
+      } else {
+        alert("Unable to start the test right now.");
+      }
     }
   };
 
@@ -379,7 +364,7 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
           )}
         </aside>
 
-        {/* RIGHT (Viewer ala Week Detail) */}
+        {/* RIGHT (Viewer) */}
         <section className="panel right">
           <div className="breadcrumb">
             <Link to="/student">Dashboard</Link>
@@ -453,7 +438,7 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                 </section>
               )}
 
-              {/* Controls (Prev/Next + Complete) */}
+              {/* Controls */}
               <div
                 style={{
                   display: "flex",
