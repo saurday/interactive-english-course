@@ -26,7 +26,6 @@ export default function PlacementReview() {
     let cancelled = false;
     (async () => {
       try {
-        // ✅ GET /placement/attempts/:aid/review (wrapper akan menambahkan /api dan header auth)
         const j = await get(`/placement/attempts/${aid}/review`);
         if (!cancelled) setData(j);
       } catch (e) {
