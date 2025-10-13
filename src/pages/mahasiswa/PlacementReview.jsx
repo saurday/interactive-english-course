@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-// ✅ gunakan wrapper API
 import { get, ApiError } from "@/config/api";
 
 export default function PlacementReview() {
@@ -120,11 +119,19 @@ body { background:#fbfbfb; }
           ) : (
             <ol style={{ display: "grid", gap: 14, paddingLeft: 18 }}>
               {(data?.questions ?? []).map((q, idx) => {
-                const hasChoice = (q.options || []).some((o) => o.chosen === true);
+                const hasChoice = (q.options || []).some(
+                  (o) => o.chosen === true
+                );
                 return (
                   <li key={q?.id ?? idx} className="qcard">
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                      {String(q.text || "").replace(/^\s*\\d+[.)-]?\\s*/, "")}
+                    <div
+                      style={{
+                        whiteSpace: "pre-line",
+                        fontWeight: 700,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {String(q.text || "").replace(/^\s*\d+[.)-]?\s*/, "")}
                     </div>
 
                     {(q.options || []).map((op) => {
