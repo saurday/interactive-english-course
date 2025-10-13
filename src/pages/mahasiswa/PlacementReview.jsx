@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ✅ gunakan wrapper API
+import { get, ApiError } from "@/config/api";
 
 export default function PlacementReview() {
-  const token = localStorage.getItem("token") || "";
   const navigate = useNavigate();
   const [sp] = useSearchParams();
   const aid = sp.get("aid");
@@ -28,21 +27,19 @@ export default function PlacementReview() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(
-          `${BASE_URL}/api/placement/attempts/${aid}/review`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j = await r.json();
+        // ✅ GET /placement/attempts/:aid/review (wrapper akan menambahkan /api dan header auth)
+        const j = await get(`/placement/attempts/${aid}/review`);
         if (!cancelled) setData(j);
       } catch (e) {
         console.error(e);
-        if (!cancelled) navigate("/student");
+        if (!cancelled) {
+          // Arahkan balik bila attempt tidak ditemukan/unauthorized
+          if (e instanceof ApiError && (e.status === 401 || e.status === 404)) {
+            navigate("/student");
+          } else {
+            navigate("/student");
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -50,7 +47,7 @@ export default function PlacementReview() {
     return () => {
       cancelled = true;
     };
-  }, [aid, token, navigate]);
+  }, [aid, navigate]);
 
   return (
     <div className="pt-root">
@@ -107,7 +104,7 @@ body { background:#fbfbfb; }
               <b>
                 {data.level}{" "}
                 {data.level_name
-                  ? `(${data.level_name.replace(/^[A-C]\d\s*/, "").trim()})`
+                  ? `(${data.level_name.replace(/^[A-C]\d\\s*/, "").trim()})`
                   : ""}
               </b>
             </div>
@@ -123,20 +120,18 @@ body { background:#fbfbfb; }
           ) : (
             <ol style={{ display: "grid", gap: 14, paddingLeft: 18 }}>
               {(data?.questions ?? []).map((q, idx) => {
-                const hasChoice = (q.options || []).some(
-                  (o) => o.chosen === true
-                );
+                const hasChoice = (q.options || []).some((o) => o.chosen === true);
                 return (
                   <li key={q?.id ?? idx} className="qcard">
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                      {String(q.text || "").replace(/^\s*\d+[.)-]?\s*/, "")}
+                      {String(q.text || "").replace(/^\s*\\d+[.)-]?\\s*/, "")}
                     </div>
 
-                    {q.options.map((op) => {
+                    {(q.options || []).map((op) => {
                       const isCorrect = op.is_correct === true;
                       const chosen = op.chosen === true;
 
-                      // HANYA warnai kalau dipilih; jangan highlight kunci kalau tidak dipilih
+                      // Warnai hanya jika dipilih
                       let cls = "opt";
                       if (chosen && isCorrect) cls += " correct chosen";
                       else if (chosen && !isCorrect) cls += " wrong chosen";
