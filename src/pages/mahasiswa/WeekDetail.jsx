@@ -3,16 +3,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronRight, CheckCircle2, Lock, Loader2, Menu } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { BASE_URL } from "@/config/api"; // ✅ pakai wrapper config
 
 // ===== helper: attempt terakhir quiz =====
 async function fetchLatestAttempt(quizId, token) {
-  const r = await fetch(
-    `${BASE_URL}/api/quizzes/${quizId}/attempts/me-latest`,
-    {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    }
-  );
+  const r = await fetch(`${BASE_URL}/quizzes/${quizId}/attempts/me-latest`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
   if (!r.ok) return null;
   const { attempt } = await r.json();
   return attempt;
@@ -42,7 +39,7 @@ function capitalize(s) {
 // Ambil semua resources satu kelas lalu diringkas ke array flat {id, week, ...}
 async function fetchWeeksForClass(classId, token) {
   try {
-    const r = await fetch(`${BASE_URL}/api/kelas/${classId}/weeks`, {
+    const r = await fetch(`${BASE_URL}/kelas/${classId}/weeks`, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     });
     if (r.status === 404) return [];
@@ -123,6 +120,7 @@ function toYouTubeEmbed(raw) {
   } catch (e) {
     console.warn("Invalid YouTube URL:", raw, e);
   }
+  return raw; // ✅ fallback aman
 }
 function buildEmbedUrl(url) {
   if (!url) return "";
@@ -132,35 +130,29 @@ function buildEmbedUrl(url) {
 
 // ======= Comments API =======
 async function fetchCommentsAPI(resourceId, token) {
-  const res = await fetch(
-    `${BASE_URL}/api/course-resources/${resourceId}/comments`,
-    {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    }
-  );
+  const res = await fetch(`${BASE_URL}/course-resources/${resourceId}/comments`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
   if (!res.ok) throw new Error(`Load comments failed (${res.status})`);
   const json = await res.json();
   return json.comments || [];
 }
 async function createCommentAPI(resourceId, text, parentId, token) {
-  const res = await fetch(
-    `${BASE_URL}/api/course-resources/${resourceId}/comments`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ text, parent_id: parentId || null }),
-    }
-  );
+  const res = await fetch(`${BASE_URL}/course-resources/${resourceId}/comments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ text, parent_id: parentId || null }),
+  });
   if (!res.ok) throw new Error(`Post comment failed (${res.status})`);
   const { comment } = await res.json();
   return comment;
 }
 async function updateCommentAPI(commentId, text, token) {
-  const res = await fetch(`${BASE_URL}/api/comments/${commentId}`, {
+  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -174,7 +166,7 @@ async function updateCommentAPI(commentId, text, token) {
   return comment;
 }
 async function deleteCommentAPI(commentId, token) {
-  const res = await fetch(`${BASE_URL}/api/comments/${commentId}`, {
+  const res = await fetch(`${BASE_URL}/comments/${commentId}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
@@ -183,7 +175,7 @@ async function deleteCommentAPI(commentId, token) {
 
 /* === Progress API (opsional) === */
 async function setCompleteAPI(resourceId, completed, token) {
-  const endpoint = `${BASE_URL}/api/course-resources/${resourceId}/complete`;
+  const endpoint = `${BASE_URL}/course-resources/${resourceId}/complete`;
   try {
     const res = await fetch(endpoint, {
       method: "PUT",
@@ -201,24 +193,18 @@ async function setCompleteAPI(resourceId, completed, token) {
 }
 
 // ===== Assignment APIs (student) =====
-// ===== Assignment APIs (student) =====
 async function fetchMySubmissionAPI(assignmentId, token) {
-  const r = await fetch(
-    `${BASE_URL}/api/assignments/${assignmentId}/submissions/me`,
-    {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    }
-  );
+  const r = await fetch(`${BASE_URL}/assignments/${assignmentId}/submissions/me`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
   if (!r.ok) return null;
 
   const json = await r.json();
 
-  // Ambil field submission bila ada, kalau tidak pakai root
   const raw = Object.prototype.hasOwnProperty.call(json, "submission")
     ? json.submission
     : json;
 
-  // Jika kosong (null/undefined) atau object tanpa jejak data, kembalikan null
   if (
     !raw ||
     typeof raw !== "object" ||
@@ -239,14 +225,11 @@ async function submitAssignmentAPI(assignmentId, { text, file }, token) {
   const fd = new FormData();
   fd.append("text", text || "");
   if (file) fd.append("file", file);
-  const r = await fetch(
-    `${BASE_URL}/api/assignments/${assignmentId}/submissions`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      body: fd,
-    }
-  );
+  const r = await fetch(`${BASE_URL}/assignments/${assignmentId}/submissions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    body: fd,
+  });
   if (!r.ok) {
     const msg = await r.text().catch(() => "");
     throw new Error(`Submit failed (${r.status}) ${msg}`);
@@ -256,7 +239,7 @@ async function submitAssignmentAPI(assignmentId, { text, file }, token) {
 }
 
 async function fetchAssignmentAPI(assignmentId, token) {
-  const r = await fetch(`${BASE_URL}/api/assignments/${assignmentId}`, {
+  const r = await fetch(`${BASE_URL}/assignments/${assignmentId}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   if (!r.ok) return null;
@@ -382,16 +365,16 @@ export default function StudentWeekDetail() {
           it.id !== current.id
             ? it
             : {
-                ...it,
-                instructions: detail.instructions ?? it.instructions,
-                dueDate: detail.due_date ?? it.dueDate,
-                maxScore: detail.max_score ?? it.maxScore,
-                allowFile: toBool(
-                  detail.allow_file !== undefined
-                    ? detail.allow_file
-                    : it.allowFile
-                ),
-              }
+              ...it,
+              instructions: detail.instructions ?? it.instructions,
+              dueDate: detail.due_date ?? it.dueDate,
+              maxScore: detail.max_score ?? it.maxScore,
+              allowFile: toBool(
+                detail.allow_file !== undefined
+                  ? detail.allow_file
+                  : it.allowFile
+              ),
+            }
         )
       );
     })();
@@ -426,7 +409,7 @@ export default function StudentWeekDetail() {
       try {
         // header kelas
         try {
-          const r = await fetch(`${BASE_URL}/api/kelas/${classId}`, {
+          const r = await fetch(`${BASE_URL}/kelas/${classId}`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/json",
@@ -547,9 +530,9 @@ export default function StudentWeekDetail() {
             c.id !== parentId
               ? c
               : {
-                  ...c,
-                  replies: c.replies.map((r) => (r.id === id ? saved : r)),
-                }
+                ...c,
+                replies: c.replies.map((r) => (r.id === id ? saved : r)),
+              }
           )
         );
       }
@@ -739,7 +722,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: #111827; /* slate-900 */
+  background: #111827;
   color: #fff;
   font-weight: 700;
   padding: 8px 14px;
@@ -752,8 +735,8 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
 /* state disabled khusus tombol */
 .btn:disabled,
 .btn.disabled {
-  background: #e5e7eb;    /* abu muda */
-  color: #94a3b8;         /* slate-400 */
+  background: #e5e7eb;
+  color: #94a3b8;
   border-color: #e5e7eb;
   cursor: not-allowed;
   box-shadow: none;
@@ -761,14 +744,14 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
 
 .btn-primary:disabled,
 .btn-primary.disabled {
-  background: #cbd5e1;    /* slate-300 */
-  color: #64748b;         /* slate-500 */
+  background: #cbd5e1;
+  color: #64748b;
   border-color: #cbd5e1;
 }
 
 .btn:disabled:hover,
 .btn-primary:disabled:hover {
-  background: inherit;    /* jangan berubah saat hover */
+  background: inherit;
 }
 `;
 
@@ -814,24 +797,18 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                 return (
                   <div
                     key={s.idx}
-                    className={`step ${s.idx === active ? "active" : ""} ${
-                      locked ? "locked" : ""
-                    }`}
+                    className={`step ${s.idx === active ? "active" : ""} ${locked ? "locked" : ""}`}
                     onClick={() => {
                       if (!locked) {
                         setActive(s.idx);
                         setSideOpen(false);
                       }
                     }}
-                    title={
-                      locked ? "Selesaikan step sebelumnya lebih dulu" : ""
-                    }
+                    title={locked ? "Selesaikan step sebelumnya lebih dulu" : ""}
                     tabIndex={0}
                     role="button"
                   >
-                    <div
-                      style={{ display: "flex", gap: 8, alignItems: "center" }}
-                    >
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span className="idx">{s.idx + 1}.</span>
                       <span>{s.title}</span>
                     </div>
@@ -881,18 +858,9 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
             <div className="viewer">
               <div className="skel skel-title shimmer" />
               <div className="skel skel-line shimmer" />
-              <div
-                className="skel skel-line shimmer"
-                style={{ width: "90%" }}
-              />
-              <div
-                className="skel skel-line shimmer"
-                style={{ width: "80%" }}
-              />
-              <div
-                className="skel skel-iframe shimmer"
-                style={{ marginTop: 14 }}
-              />
+              <div className="skel skel-line shimmer" style={{ width: "90%" }} />
+              <div className="skel skel-line shimmer" style={{ width: "80%" }} />
+              <div className="skel skel-iframe shimmer" style={{ marginTop: 14 }} />
             </div>
           ) : current ? (
             <div className="viewer">
@@ -953,9 +921,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   )}
 
                   <button
-                    className={`btn btn-primary ${
-                      lastAttempt?.status === "submitted" ? "disabled" : ""
-                    }`}
+                    className={`btn btn-primary ${lastAttempt?.status === "submitted" ? "disabled" : ""}`}
                     disabled={lastAttempt?.status === "submitted"}
                     onClick={async () => {
                       if (lastAttempt?.status === "submitted") return;
@@ -975,15 +941,12 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
 
                       if (!quizId) {
                         try {
-                          const ref = await fetch(
-                            `${BASE_URL}/api/kelas/${classId}/weeks`,
-                            {
-                              headers: {
-                                Authorization: `Bearer ${token}`,
-                                Accept: "application/json",
-                              },
-                            }
-                          );
+                          const ref = await fetch(`${BASE_URL}/kelas/${classId}/weeks`, {
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                              Accept: "application/json",
+                            },
+                          });
                           if (ref.ok) {
                             const weeks = await ref.json();
                             const found = (weeks || [])
@@ -1000,16 +963,13 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                         }
                       }
 
-                      const r = await fetch(
-                        `${BASE_URL}/api/quizzes/${quizId}/attempts/start`,
-                        {
-                          method: "POST",
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                            Accept: "application/json",
-                          },
-                        }
-                      );
+                      const r = await fetch(`${BASE_URL}/quizzes/${quizId}/attempts/start`, {
+                        method: "POST",
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          Accept: "application/json",
+                        },
+                      });
                       if (!r.ok) {
                         const msg = await r.text().catch(() => "");
                         showHud(`Failed to start: ${r.status} ${msg}`);
@@ -1055,9 +1015,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </div>
 
                   {current.instructions && (
-                    <section
-                      style={{ whiteSpace: "pre-wrap", marginBottom: 14 }}
-                    >
+                    <section style={{ whiteSpace: "pre-wrap", marginBottom: 14 }}>
                       {current.instructions}
                     </section>
                   )}
@@ -1165,7 +1123,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
                         className="btn btn-primary"
-                        disabled={submitting || hasSubmission} // <-- pakai hasSubmission
+                        disabled={submitting || hasSubmission}
                         title={
                           hasSubmission
                             ? "You already submitted. Use Re-submit to update."
@@ -1203,9 +1161,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                 </button>
 
                 <button
-                  className={`btn ${
-                    steps[active]?.completed ? "" : "btn-primary"
-                  }`}
+                  className={`btn ${steps[active]?.completed ? "" : "btn-primary"}`}
                   onClick={() => toggleComplete(current.id)}
                   title="Tandai materi ini selesai"
                 >
@@ -1241,9 +1197,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                     onClick={() =>
                       setActive((i) => Math.min(items.length - 1, i + 1))
                     }
-                    title={
-                      !isUnlocked(active + 1) ? "Selesaikan step ini dulu" : ""
-                    }
+                    title={!isUnlocked(active + 1) ? "Selesaikan step ini dulu" : ""}
                   >
                     Next
                   </button>
@@ -1293,9 +1247,7 @@ function Discussion({
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
         />
-        <div
-          style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}
-        >
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
           <button className="btn btn-primary" onClick={addComment}>
             Post
           </button>
@@ -1355,9 +1307,7 @@ function CommentItem({
       <div className="cmt-head">
         <div>
           {data.author}{" "}
-          {data.role === "dosen" && (
-            <span className="cmt-meta">• Lecturer</span>
-          )}
+          {data.role === "dosen" && <span className="cmt-meta">• Lecturer</span>}
           <div className="cmt-meta">
             {new Date(data.createdAt).toLocaleString()}
             {typeof data.score === "number" && (
@@ -1475,9 +1425,7 @@ function ReplyItem({ data, onEdit, onDelete }) {
       <div className="cmt-head">
         <div>
           {data.author}{" "}
-          {data.role === "dosen" && (
-            <span className="cmt-meta">• Lecturer</span>
-          )}
+          {data.role === "dosen" && <span className="cmt-meta">• Lecturer</span>}
           <div className="cmt-meta">
             {new Date(data.createdAt).toLocaleString()}
             {typeof data.score === "number" && (
