@@ -14,7 +14,8 @@ import {
 } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ✅ Pakai wrapper API agar tidak double /api
+import { get, post, ApiError, BASE_URL } from "@/config/api";
 
 // ——— Modal kecil di tengah layar ———
 function CenterAlert({ open, text, onClose }) {
@@ -84,8 +85,6 @@ const pageStyles = `
 .badge{ font-size:12px; font-weight:800; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#4338ca; }
 .disabled{ opacity:.55; pointer-events:none; }
 .input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; outline:none; }
-
-}
 `;
 
 // ——— Komponen utama ———
@@ -93,16 +92,16 @@ export default function AttemptPage() {
   const { classId, week, quizId } = useParams();
   const [sp] = useSearchParams();
   const aidFromQS = sp.get("aid");
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || "";
   const navigate = useNavigate();
 
-  const [attempt, setAttempt] = useState(null); // { id, status, time_left, score, ... }
-  const [quiz, setQuiz] = useState(null); // { title, questions:[{id,question_text,options:[...]}] }
-  const [answers, setAnswers] = useState({}); // { [question_id]: option_id | "__TEXT__::<value>" }
+  const [attempt, setAttempt] = useState(null);
+  const [quiz, setQuiz] = useState(null);
+  const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ open: false, text: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null); // detik
+  const [timeLeft, setTimeLeft] = useState(null);
   const tickRef = useRef(null);
   const started = attempt?.status === "started";
 
@@ -116,22 +115,15 @@ export default function AttemptPage() {
           return;
         }
 
-        const r = await fetch(`${BASE_URL}/api/attempts/${aidFromQS}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!r.ok) throw new Error(`Load attempt failed (${r.status})`);
-
-        const json = await r.json();
+        // ✅ wrapper get — endpoint TANPA /api
+        const json = await get(`/attempts/${aidFromQS}`);
         const a = json.attempt || json;
         const qz = json.quiz || {};
 
         setAttempt(a);
         setQuiz(qz);
 
-        // ---- FIX: 0 = tanpa batas waktu -> jadikan null supaya timer tidak jalan
+        // 0 = tanpa batas waktu -> jadikan null supaya timer tidak jalan
         const noLimit = Number(qz.time_limit ?? 0) === 0;
         const rawLeft = Number(a.time_left);
         const tl = noLimit
@@ -152,19 +144,23 @@ export default function AttemptPage() {
         setAnswers(seeded);
       } catch (e) {
         console.error(e);
-        setAlert({ open: true, text: e.message || "Gagal memuat attempt." });
+        setAlert({
+          open: true,
+          text: e.message || "Gagal memuat attempt.",
+        });
       } finally {
         setLoading(false);
       }
     })();
-  }, [aidFromQS, token]);
+  }, [aidFromQS]);
 
   // Kirim submit aborted saat tab ditutup / refresh / pindah tab
   useEffect(() => {
     if (!attempt || attempt.status !== "started") return;
 
     const submitAborted = () => {
-      fetch(`${BASE_URL}/api/attempts/${attempt.id}/submit?aborted=1`, {
+      // ✅ pakai BASE_URL dari config/api (sudah include /api) → tidak double
+      fetch(`${BASE_URL}/attempts/${attempt.id}/submit?aborted=1`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -176,15 +172,13 @@ export default function AttemptPage() {
       }).catch(() => {});
     };
 
-    // 1) Tutup/refresh tab
     const beforeUnload = (event) => {
       submitAborted();
-      event.preventDefault(); // <- pakai parameternya
-      event.returnValue = ""; // <- agar beberapa browser menampilkan konfirmasi
+      event.preventDefault();
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", beforeUnload);
 
-    // 2) Sembunyikan tab (opsional, saat user benar-benar pergi dari tab)
     const onHidden = () => {
       if (document.visibilityState === "hidden") submitAborted();
     };
@@ -200,7 +194,6 @@ export default function AttemptPage() {
     async (auto = false) => {
       if (!attempt) return;
 
-      // Anti double-submit di sisi UI
       if (attempt.status !== "started") {
         setAlert({ open: true, text: "Attempt sudah disubmit." });
         return;
@@ -210,36 +203,10 @@ export default function AttemptPage() {
       try {
         setSubmitting(true);
 
-        const r = await fetch(`${BASE_URL}/api/attempts/${attempt.id}/submit`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
+        // ✅ wrapper post
+        const json = await post(`/attempts/${attempt.id}/submit`, {});
 
-        if (!r.ok) {
-          const txt = await r.text().catch(() => "");
-          // 409 dari backend → attempt sudah disubmit (race/duplikat)
-          if (r.status === 409) {
-            setAlert({ open: true, text: "Quiz sudah pernah disubmit." });
-            try {
-              const j = JSON.parse(txt);
-              const aid = j?.attempt?.id ?? attempt.id;
-              navigate(
-                `/student/classes/${classId}/weeks/${week}/quiz/${quizId}/review?aid=${aid}`
-              );
-            } catch {
-              // abaikan jika body bukan JSON
-            }
-            return;
-          }
-          throw new Error(`Submit gagal (${r.status}) ${txt}`);
-        }
-
-        const json = await r.json();
-
-        // Cache skor lokal agar WeekDetail bisa menampilkan nilai cepat
+        // cache skor lokal
         try {
           localStorage.setItem(
             `quiz-score:${quizId}`,
@@ -250,10 +217,9 @@ export default function AttemptPage() {
             })
           );
         } catch {
-          // abaikan error storage
+          // ignore localStorage error
         }
 
-        // Update state attempt agar tombol terkunci & skor tampil
         setAttempt((a) => ({
           ...a,
           status: "submitted",
@@ -261,7 +227,6 @@ export default function AttemptPage() {
           ended_at: new Date().toISOString(),
         }));
 
-        // Notifikasi
         setAlert({
           open: true,
           text: auto
@@ -269,20 +234,29 @@ export default function AttemptPage() {
             : "Quiz telah disubmit!",
         });
 
-        // Pindah ke halaman review
         setTimeout(() => {
           navigate(
             `/student/classes/${classId}/weeks/${week}/quiz/${quizId}/review?aid=${attempt.id}`
           );
         }, 500);
       } catch (e) {
+        // 409 dari backend → attempt sudah disubmit (race/duplikat)
+        if (e instanceof ApiError && e.status === 409) {
+          setAlert({ open: true, text: "Quiz sudah pernah disubmit." });
+          const aid =
+            e.data?.attempt?.id != null ? e.data.attempt.id : attempt.id;
+          navigate(
+            `/student/classes/${classId}/weeks/${week}/quiz/${quizId}/review?aid=${aid}`
+          );
+          return;
+        }
         console.error(e);
         setAlert({ open: true, text: e.message || "Submit gagal." });
       } finally {
         setSubmitting(false);
       }
     },
-    [attempt, submitting, token, classId, week, quizId, navigate]
+    [attempt, submitting, classId, week, quizId, navigate]
   );
 
   // auto timer & auto-submit
@@ -296,7 +270,7 @@ export default function AttemptPage() {
         if (s == null) return s;
         if (s <= 1) {
           clearInterval(tickRef.current);
-          handleSubmit(true); // aman: sudah useCallback
+          handleSubmit(true);
           return 0;
         }
         return s - 1;
@@ -309,17 +283,9 @@ export default function AttemptPage() {
   const abortAttempt = async () => {
     if (!attempt?.id || attempt.status !== "started") return;
     try {
-      await fetch(`${BASE_URL}/api/attempts/${attempt.id}/abort`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        // agar tetap dikirim walau user menutup tab
-        keepalive: true,
-      });
+      // ✅ wrapper post
+      await post(`/attempts/${attempt.id}/abort`, {});
     } catch (e) {
-      // diamkan saja; ini best-effort
       console.warn("abortAttempt failed:", e);
     }
   };
@@ -332,17 +298,12 @@ export default function AttemptPage() {
   }, [timeLeft]);
 
   const pickOption = async (qId, optId) => {
-    // simpan lokal dulu agar terasa instan
     setAnswers((map) => ({ ...map, [qId]: String(optId) }));
     try {
-      await fetch(`${BASE_URL}/api/attempts/${attempt.id}/answers`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ question_id: qId, option_id: Number(optId) }),
+      // ✅ wrapper post
+      await post(`/attempts/${attempt.id}/answers`, {
+        question_id: qId,
+        option_id: Number(optId),
       });
     } catch (e) {
       console.error(e);
@@ -352,7 +313,6 @@ export default function AttemptPage() {
 
   // simpan typed answer (dengan debounce ringan)
   const textTimers = useRef({});
-
   useEffect(() => {
     return () => {
       Object.values(textTimers.current || {}).forEach((t) => clearTimeout(t));
@@ -365,14 +325,10 @@ export default function AttemptPage() {
     if (textTimers.current[qId]) clearTimeout(textTimers.current[qId]);
     textTimers.current[qId] = setTimeout(async () => {
       try {
-        await fetch(`${BASE_URL}/api/attempts/${attempt.id}/answers`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({ question_id: qId, text_answer: text }),
+        // ✅ wrapper post
+        await post(`/attempts/${attempt.id}/answers`, {
+          question_id: qId,
+          text_answer: text,
         });
       } catch (e) {
         console.error(e);
@@ -423,7 +379,6 @@ export default function AttemptPage() {
                       {idx + 1}. {stripLeadingNumber(q.question_text || q.text)}
                     </div>
 
-                    {/** Deteksi short answer */}
                     {String(q.type || "").toUpperCase() === "SHORT_ANSWER" ||
                     (Array.isArray(q.options) && q.options.length === 0) ? (
                       <input
