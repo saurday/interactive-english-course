@@ -20,12 +20,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 /* ---------- Config ---------- */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
+import api from "@/config/api";
 
 /* ---------- Helpers ---------- */
 const toRoleLabel = (role) =>
@@ -110,11 +105,7 @@ export default function AdminDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const r = await fetch(`${BASE_URL}/api/users`, {
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(`Failed (${r.status})`);
-        const users = await r.json(); // array user
+        const { data: users } = await api.get(`/api/users`);
 
         // Hitung total & breakdown role
         const total = users.length;
@@ -220,18 +211,12 @@ export default function AdminDashboard() {
     setSavingUser(true);
     setMsg(null);
     try {
-      const r = await fetch(`${BASE_URL}/api/users`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          password: form.password.trim(),
-          role: form.role, // 'mahasiswa' | 'dosen' | 'admin'
-        }),
+      const { data: j } = await api.post(`/api/users`, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password.trim(),
+        role: form.role, // 'mahasiswa' | 'dosen' | 'admin'
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.message || "Gagal menambahkan user.");
 
       // refresh ringan
       setStats((s) => ({
@@ -782,7 +767,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                   className="btn btn-sm"
                   onClick={() => setShowAdd(false)}
                 >
-                  Cancel
+                Cancel
                 </button>
                 <button
                   type="submit"
