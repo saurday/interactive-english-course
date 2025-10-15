@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from "react";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const headers = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  Accept: "application/json",
-});
+import api from "@/CONFIG/API";
 
 function Bar({ value = 0 }) {
   return (
@@ -35,22 +30,19 @@ export default function AdminProgress() {
     (async () => {
       setLoading(true);
       try {
-        const tries = [
-          `${BASE_URL}/api/progress`,
-          `${BASE_URL}/api/users/progress`,
-        ];
+        const tries = ["/api/progress", "/api/users/progress"];
         let ok = null;
+
         for (const url of tries) {
           try {
-            const r = await fetch(url, { headers: headers() });
-            if (r.ok) {
-              ok = await r.json();
-              break;
-            }
+            const { data } = await api.get(url);
+            ok = data;
+            break;
           } catch {
-            /* ignore */
+            /* ignore and try next */
           }
         }
+
         // fallback contoh
         if (!ok) {
           ok = [
@@ -77,6 +69,7 @@ export default function AdminProgress() {
             },
           ];
         }
+
         const arr = Array.isArray(ok) ? ok : ok.data || ok.rows || [];
         setRows(arr);
       } finally {
