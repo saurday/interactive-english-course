@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 /* ====== Config & helpers ====== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import api from "@/config/api";
 
 const getUserId = () => {
   try {
@@ -30,14 +30,6 @@ const getUserId = () => {
     return null;
   }
 };
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${
-    localStorage.getItem("token") || localStorage.getItem("accessToken") || ""
-  }`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
 
 /* ====== Page ====== */
 export default function AdminSettings() {
@@ -114,11 +106,7 @@ export default function AdminSettings() {
     (async () => {
       setLoading(true);
       try {
-        const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-          headers: authHeaders(),
-        });
-        if (!r.ok) throw new Error(`Failed (${r.status})`);
-        const u = await r.json();
+        const { data: u } = await api.get(`/api/users/${userId}`);
         setName(u.name || "");
         setEmail(u.email || "");
       } catch (e) {
@@ -180,21 +168,7 @@ export default function AdminSettings() {
         body.password_confirmation = newPwd2;
       }
 
-      const r = await fetch(`${BASE_URL}/api/users/${userId}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify(body),
-      });
-
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        const firstError =
-          j?.message ||
-          (j?.errors &&
-            Object.values(j.errors)[0] &&
-            Object.values(j.errors)[0][0]);
-        throw new Error(firstError || `Gagal menyimpan (${r.status})`);
-      }
+      const { data: j } = await api.put(`/api/users/${userId}`, body);
 
       // perbarui localStorage userInfo
       try {
