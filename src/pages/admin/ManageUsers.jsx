@@ -23,15 +23,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 /* ----- Config & helpers ----- */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () =>
-  localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${getToken()}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
+import api from "@/config/api";
 
 const roleToBadge = (r) =>
   r === "mahasiswa" ? "STUDENT" : r === "dosen" ? "LECTURE" : "ADMIN";
@@ -191,14 +183,12 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     try {
       const url =
         roleFilter && roleFilter !== "all"
-          ? `${BASE_URL}/api/users?role=${encodeURIComponent(roleFilter)}`
-          : `${BASE_URL}/api/users`;
-      const r = await fetch(url, { headers: authHeaders() });
-      if (!r.ok) throw new Error(`Failed to load users (${r.status})`);
-      const j = await r.json();
+          ? `/api/users?role=${encodeURIComponent(roleFilter)}`
+          : `/api/users`;
+      const { data: j } = await api.get(url);
       setUsers(Array.isArray(j) ? j : []);
     } catch (e) {
-      setErr(e.message || "Failed to load users");
+      setErr(e?.response?.data?.message || e.message || "Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -240,15 +230,10 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     if (!window.confirm(`Delete user "${u.name}" ?`)) return;
     setBusy(true);
     try {
-      const r = await fetch(`${BASE_URL}/api/users/${u.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j?.message || "Failed to delete");
+      await api.delete(`/api/users/${u.id}`);
       setUsers((arr) => arr.filter((x) => x.id !== u.id));
     } catch (e) {
-      alert(e.message || "Failed to delete");
+      alert(e?.response?.data?.message || e.message || "Failed to delete");
     } finally {
       setBusy(false);
     }
@@ -262,40 +247,30 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       password: password.trim(),
       role,
     };
-    const r = await fetch(`${BASE_URL}/api/users`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify(payload),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
+    try {
+      const { data: j } = await api.post(`/api/users`, payload);
+      return j; // data user baru
+    } catch (e) {
+      const j = e?.response?.data;
       const msg =
         j?.message ||
-        (j?.errors
-          ? Object.values(j.errors).flat().join(", ")
-          : `HTTP ${r.status}`);
+        (j?.errors ? Object.values(j.errors).flat().join(", ") : e.message);
       throw new Error(msg);
     }
-    return j; // data user baru
   };
 
   // UPDATE user -> PUT /api/users/:id
   const updateUser = async (id, body) => {
-    const r = await fetch(`${BASE_URL}/api/users/${id}`, {
-      method: "PUT",
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
+    try {
+      const { data: j } = await api.put(`/api/users/${id}`, body);
+      return j; // data user ter‐update
+    } catch (e) {
+      const j = e?.response?.data;
       const msg =
         j?.message ||
-        (j?.errors
-          ? Object.values(j.errors).flat().join(", ")
-          : `HTTP ${r.status}`);
+        (j?.errors ? Object.values(j.errors).flat().join(", ") : e.message);
       throw new Error(msg);
     }
-    return j; // data user ter‐update
   };
 
   // open add/edit modals
