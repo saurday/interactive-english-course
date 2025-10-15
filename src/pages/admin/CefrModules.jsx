@@ -14,14 +14,7 @@ import {
 } from "lucide-react";
 
 /* ===== Config ===== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () =>
-  localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
-const authHeaders = () => ({
-  Authorization: `Bearer ${getToken()}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
+import api from "@/config/api";
 
 /* ===== Small UI ===== */
 const Pill = ({ children }) => (
@@ -164,24 +157,12 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const r = await fetch(`${BASE_URL}/api/placement/contents`, {
-          headers: authHeaders(),
-        });
-        const text = await r.text();
-        let j;
-        try {
-          j = JSON.parse(text);
-        } catch {
-          throw new Error(
-            `(${r.status}) ${r.statusText}. Body: ${text.slice(0, 200)}`
-          );
-        }
-        if (!r.ok) throw new Error(j?.message || `Failed (${r.status})`);
+        const { data: j } = await api.get(`/api/placement/contents`);
         setResources(
-          Array.isArray(j.contents) ? j.contents : Array.isArray(j) ? j : []
+          Array.isArray(j?.contents) ? j.contents : Array.isArray(j) ? j : []
         );
       } catch (e) {
-        setErr(e.message || "Failed to load modules");
+        setErr(e?.response?.data?.message || e.message || "Failed to load modules");
       } finally {
         setLoading(false);
       }
