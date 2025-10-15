@@ -11,7 +11,8 @@ import {
   Shield,
 } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+/* ---- Config ---- */
+import api from "@/config/api";
 
 const ROLES = [
   { value: "student", label: "Student" },
@@ -25,7 +26,6 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // null | {mode:'create'|'edit', data?:user}
   const [saving, setSaving] = useState(false);
-  const token = localStorage.getItem("token") || "";
 
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase();
@@ -41,14 +41,8 @@ export default function AdminUsers() {
   async function load() {
     try {
       setLoading(true);
-      const r = await fetch(`${BASE_URL}/api/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      const j = r.ok ? await r.json() : [];
-      setUsers(Array.isArray(j) ? j : j.data || []);
+      const { data: j } = await api.get(`/api/users`);
+      setUsers(Array.isArray(j) ? j : j?.data || []);
     } finally {
       setLoading(false);
     }
@@ -69,11 +63,10 @@ export default function AdminUsers() {
 
   async function onDelete(id) {
     if (!window.confirm("Delete this user?")) return;
-    const r = await fetch(`${BASE_URL}/api/users/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (r.ok) setUsers((s) => s.filter((x) => x.id !== id));
+    const r = await api.delete(`/api/users/${id}`);
+    if (r.status === 200 || r.status === 204) {
+      setUsers((s) => s.filter((x) => x.id !== id));
+    }
   }
 
   async function onSubmit(e) {
@@ -82,10 +75,6 @@ export default function AdminUsers() {
     try {
       setSaving(true);
       const isEdit = modal.mode === "edit";
-      const url = isEdit
-        ? `${BASE_URL}/api/users/${modal.data.id}`
-        : `${BASE_URL}/api/users`;
-      const method = isEdit ? "PUT" : "POST";
 
       const payload = {
         name: modal.data.name,
@@ -95,18 +84,14 @@ export default function AdminUsers() {
       if (!isEdit || modal.data.password)
         payload.password = modal.data.password;
 
-      const r = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j?.message || "Failed");
+      let j;
+      if (isEdit) {
+        const { data } = await api.put(`/api/users/${modal.data.id}`, payload);
+        j = data;
+      } else {
+        const { data } = await api.post(`/api/users`, payload);
+        j = data;
+      }
 
       if (isEdit) {
         setUsers((s) => s.map((x) => (x.id === modal.data.id ? j : x)));
@@ -115,7 +100,7 @@ export default function AdminUsers() {
       }
       onClose();
     } catch (err) {
-      alert(err.message || "Save failed");
+      alert(err?.response?.data?.message || err.message || "Save failed");
     } finally {
       setSaving(false);
     }
