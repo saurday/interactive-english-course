@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "@/CONFIG/API";
+import api from "@/config/api";
 
 function Bar({ value = 0 }) {
   return (
