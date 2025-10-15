@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
-/* ---------- Config ---------- */
-import api from "@/config/api";
+/* ---------- Config (pakai wrapper API) ---------- */
+import { get, post } from "@/CONFIG/API";
 
 /* ---------- Helpers ---------- */
 const toRoleLabel = (role) =>
@@ -105,7 +105,8 @@ export default function AdminDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const { data: users } = await api.get(`/api/users`);
+        // ⬇️ Ambil data via wrapper get()
+        const users = await get("/api/users"); // diharapkan return array
 
         // Hitung total & breakdown role
         const total = users.length;
@@ -122,8 +123,7 @@ export default function AdminDashboard() {
           d.setDate(d.getDate() - (6 - i)); // oldest -> newest
           return {
             key: makeKey(d),
-            // ✅ gunakan EN agar hari berbahasa Inggris
-            label: d.toLocaleDateString("en-US", { weekday: "short" }), // Mon, Tue, ...
+            label: d.toLocaleDateString("en-US", { weekday: "short" }),
             value: 0,
           };
         });
@@ -211,7 +211,8 @@ export default function AdminDashboard() {
     setSavingUser(true);
     setMsg(null);
     try {
-      const { data: j } = await api.post(`/api/users`, {
+      // ⬇️ Simpan user baru via wrapper post()
+      const j = await post("/api/users", {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password.trim(),
@@ -562,7 +563,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                   const pct = Math.round((count / totalPeople) * 100);
                   return (
                     <div key={k} className="role-tile">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap: 2">
                         <div
                           className="icon-wrap"
                           style={{ width: 30, height: 30 }}
@@ -630,7 +631,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
             </table>
           </div>
 
-          {/* Quick actions (judul ditebalkan) */}
+          {/* Quick actions */}
           <div className="grid grid-3" style={{ marginTop: 14 }}>
             <div className="card hoverable cta">
               <div>
@@ -767,7 +768,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                   className="btn btn-sm"
                   onClick={() => setShowAdd(false)}
                 >
-                Cancel
+                  Cancel
                 </button>
                 <button
                   type="submit"
