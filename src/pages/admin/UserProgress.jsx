@@ -20,14 +20,7 @@ import {
 } from "lucide-react";
 
 /* ====== Config & helpers ====== */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () =>
-  localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
-const authHeaders = () => ({
-  Authorization: `Bearer ${getToken()}`,
-  Accept: "application/json",
-  "Content-Type": "application/json",
-});
+import api from "@/config/api";
 
 /* Small UI */
 const Stat = ({ icon, label, value, sub }) => (
@@ -196,16 +189,11 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const r = await fetch(`${BASE_URL}/api/admin/students/progress`, {
-          headers: authHeaders(),
-        });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j?.message || `Failed (${r.status})`);
-
+        const { data: j } = await api.get(`/api/admin/students/progress`);
         setStudents(Array.isArray(j.students) ? j.students : []);
         setTotalResources(j.total_resources || 0);
       } catch (e) {
-        setErr(e.message || "Failed to load");
+        setErr(e?.response?.data?.message || e.message || "Failed to load");
       } finally {
         setLoading(false);
       }
@@ -216,11 +204,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     setResLoading(true);
     setResErr(null);
     try {
-      const r = await fetch(`${BASE_URL}/api/course-resources`, {
-        headers: authHeaders(),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.message || `Failed (${r.status})`);
+      const { data: j } = await api.get(`/api/course-resources`);
       const arr = Array.isArray(j.resources)
         ? j.resources
         : Array.isArray(j)
@@ -230,7 +214,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       // sekalian sinkronkan counter di chip
       setTotalResources(j.total ?? arr.length);
     } catch (e) {
-      setResErr(e.message || "Failed to load resources");
+      setResErr(
+        e?.response?.data?.message || e.message || "Failed to load resources"
+      );
     } finally {
       setResLoading(false);
     }
