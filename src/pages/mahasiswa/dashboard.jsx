@@ -1,3 +1,4 @@
+// src/pages/mahasiswa/dashboard.jsx
 import React, { useEffect, useState } from "react";
 import {
   Home,
@@ -307,11 +308,26 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
   padding: 20px clamp(12px, 2vw, 24px);
 }
 
-.mhs-dash .grid{
-  display:grid;
-  gap:16px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
+
+ .weeks{
+   display:flex;
+   flex-wrap:wrap;
+   gap:16px;
+   justify-content:flex-start;
+ }
+
+ .weeks .week-card{
+   width:320px;              
+   max-width:100%;
+   flex:0 0 320px;          
+ }
+ @media (max-width:980px){
+   .weeks .week-card{ flex:1 1 calc(50% - 8px); width:auto; }
+ }
+ @media (max-width:640px){
+   .weeks .week-card{ flex:1 1 100%; }
+ }
+
 
 .sidebar {
   width: var(--sbw);
@@ -596,7 +612,8 @@ button.menu-item{
                   There is no material for this class yet.
                 </div>
               ) : (
-                <div className="grid">
+                <div className="weeks">
+                  {" "}
                   {weeks
                     .slice()
                     .sort((a, b) => (a.week_number || 0) - (b.week_number || 0))
