@@ -184,8 +184,8 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     try {
       const url =
         roleFilter && roleFilter !== "all"
-          ? `/api/users?role=${encodeURIComponent(roleFilter)}`
-          : `/api/users`;
+          ? `/users?role=${encodeURIComponent(roleFilter)}`
+          : `/users`;
       const { data: j } = await get(url);
       setUsers(Array.isArray(j) ? j : j?.data || []);
     } catch (e) {
