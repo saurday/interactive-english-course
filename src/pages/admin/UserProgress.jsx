@@ -12,10 +12,6 @@ import {
   Loader2,
   Search,
   ChevronRight,
-  Download,
-  Printer,
-  TrendingUp,
-  PieChart,
   Target,
 } from "lucide-react";
 
@@ -192,9 +188,11 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await get("/admin/students/progress");
-        setStudents(Array.isArray(j?.students) ? j.students : []);
-        setTotalResources(j?.total_resources || 0);
+        const j = await get("/admin/students/progress");
+        // dukung bentuk {students:[...], total_resources:n} atau array langsung
+        const list = Array.isArray(j?.students) ? j.students : (Array.isArray(j) ? j : []);
+        setStudents(list);
+        setTotalResources(j?.total_resources ?? j?.total ?? 0);
       } catch (e) {
         const msg = e instanceof ApiError ? e.message : e?.message;
         setErr(msg || "Failed to load");
@@ -208,11 +206,10 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     setResLoading(true);
     setResErr(null);
     try {
-      const { data: j } = await get("/course-resources");
-      const arr = Array.isArray(j?.resources) ? j.resources : Array.isArray(j) ? j : [];
+      const j = await get("/course-resources");
+      const arr = Array.isArray(j?.resources) ? j.resources : (Array.isArray(j) ? j : []);
       setResources(arr);
-      // sinkronkan counter di chip
-      setTotalResources(j?.total ?? arr.length);
+      setTotalResources(j?.total ?? j?.total_resources ?? arr.length);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e?.message;
       setResErr(msg || "Failed to load resources");
@@ -423,11 +420,13 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                         </tr>
                       ) : (
                         pageData.map((u) => {
-                          const pct = u?.progress?.percent;
-                          const noData = pct === null || Number.isNaN(pct);
+                          const pctRaw = u?.progress?.percent;
+                          const pctNum = Number(pctRaw);
+                          const noData =
+                            pctRaw == null || Number.isNaN(pctNum);
                           const width = noData
                             ? 0
-                            : Math.max(0, Math.min(100, pct));
+                            : Math.max(0, Math.min(100, pctNum));
                           return (
                             <tr className="tr" key={u.id}>
                               <td className="td">{u.name}</td>
@@ -574,7 +573,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                     const term = resQ.trim().toLowerCase();
                     const list = resources
                       .filter((r) =>
-                        resType === "all" ? true : r.type === resType
+                        resType === "all"
+                          ? true
+                          : (r.type || "").toLowerCase() === resType
                       )
                       .filter((r) =>
                         !term
@@ -589,7 +590,6 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                             <th className="th">Title</th>
                             <th className="th">Type</th>
                             <th className="th">Week</th>
-                            {/* kolom Action dilebarkan sedikit */}
                             <th className="th" style={{ minWidth: 220 }}>
                               Action
                             </th>
@@ -651,7 +651,8 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                     }}
                                   >
                                     {(r.type === "video" ||
-                                      (r.type === "composite" &&
+                                      ((r.type || "").toLowerCase() ===
+                                        "composite" &&
                                         r.video_url)) &&
                                       r.video_url && (
                                         <a
@@ -665,7 +666,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                       )}
 
                                     {(r.type === "file" ||
-                                      (r.type === "composite" && r.file_url)) &&
+                                      ((r.type || "").toLowerCase() ===
+                                        "composite" &&
+                                        r.file_url)) &&
                                       r.file_url && (
                                         <a
                                           className="pill-link"
@@ -677,20 +680,23 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                         </a>
                                       )}
 
-                                    {(r.type === "text" ||
-                                      (r.type === "composite" &&
+                                    {((r.type || "").toLowerCase() === "text" ||
+                                      ((r.type || "").toLowerCase() ===
+                                        "composite" &&
                                         !r.video_url &&
                                         !r.file_url)) && (
                                       <span className="badge">Text only</span>
                                     )}
 
-                                    {r.type === "quiz" && r.quiz_id && (
-                                      <span className="badge">
-                                        Quiz #{r.quiz_id}
-                                      </span>
-                                    )}
+                                    {(r.type || "").toLowerCase() === "quiz" &&
+                                      r.quiz_id && (
+                                        <span className="badge">
+                                          Quiz #{r.quiz_id}
+                                        </span>
+                                      )}
 
-                                    {r.type === "assignment" &&
+                                    {(r.type || "").toLowerCase() ===
+                                      "assignment" &&
                                       r.assignment_id && (
                                         <span className="badge">
                                           Assignment #{r.assignment_id}
