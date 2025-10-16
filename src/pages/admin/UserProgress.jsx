@@ -192,7 +192,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await get("/api/admin/students/progress");
+        const { data: j } = await get("/admin/students/progress");
         setStudents(Array.isArray(j?.students) ? j.students : []);
         setTotalResources(j?.total_resources || 0);
       } catch (e) {
@@ -208,7 +208,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     setResLoading(true);
     setResErr(null);
     try {
-      const { data: j } = await get("/api/course-resources");
+      const { data: j } = await get("/course-resources");
       const arr = Array.isArray(j?.resources) ? j.resources : Array.isArray(j) ? j : [];
       setResources(arr);
       // sinkronkan counter di chip
