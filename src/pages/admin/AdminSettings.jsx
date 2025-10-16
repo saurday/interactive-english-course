@@ -19,9 +19,10 @@ import {
   BookOpen,
 } from "lucide-react";
 
-/* ====== Config & helpers ====== */
-import api from "@/config/api";
+/* ====== API client (named imports) ====== */
+import { get, put } from "@/config/api";
 
+/* ====== Helpers ====== */
 const getUserId = () => {
   try {
     const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
@@ -106,9 +107,10 @@ export default function AdminSettings() {
     (async () => {
       setLoading(true);
       try {
-        const { data: u } = await api.get(`/users/${userId}`);
-        setName(u.name || "");
-        setEmail(u.email || "");
+        // ⬇️ CUKUP "/users/:id" (baseURL sudah mengandung /api)
+        const { data: u } = await get(`/users/${userId}`);
+        setName(u?.name || "");
+        setEmail(u?.email || "");
       } catch (e) {
         setMsg({
           type: "error",
@@ -168,7 +170,8 @@ export default function AdminSettings() {
         body.password_confirmation = newPwd2;
       }
 
-      const { data: j } = await api.put(`/users/${userId}`, body);
+      // ⬇️ PUT via helper; baseURL sudah /api
+      const { data: j } = await put(`/users/${userId}`, body);
 
       // perbarui localStorage userInfo
       try {
@@ -176,9 +179,9 @@ export default function AdminSettings() {
           "userInfo",
           JSON.stringify({
             ...JSON.parse(localStorage.getItem("userInfo") || "{}"),
-            name: j.name,
-            email: j.email,
-            id: j.id,
+            name: j?.name,
+            email: j?.email,
+            id: j?.id,
           })
         );
       } catch {
