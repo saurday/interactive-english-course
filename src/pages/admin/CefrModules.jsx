@@ -158,7 +158,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await get("/api/placement/contents");
+        const { data: j } = await get("/placement/contents");
         setResources(
           Array.isArray(j?.contents) ? j.contents : Array.isArray(j) ? j : []
         );
