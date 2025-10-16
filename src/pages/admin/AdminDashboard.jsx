@@ -105,7 +105,7 @@ export default function AdminDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const { data: usersResp } = await get(`/api/users`);
+        const { data: usersResp } = await get(`/users`);
         const users = Array.isArray(usersResp)
           ? usersResp
           : usersResp?.data ?? [];
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
     setSavingUser(true);
     setMsg(null);
     try {
-      const { data: j } = await post(`/api/users`, {
+      const { data: j } = await post(`/users`, {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password.trim(),
