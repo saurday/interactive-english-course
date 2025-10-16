@@ -61,6 +61,7 @@ async function fetchWeeksForClass(classId, token) {
             text: res.text,
             videoUrl: res.video_url,
             fileUrl: res.file_url,
+            url: res.url || res.link_url || null,
             quizId: res.quiz_id ?? res.quiz?.id ?? null,
             quiz_id: res.quiz_id ?? res.quiz?.id ?? null,
             completed: !!(
@@ -130,23 +131,29 @@ function buildEmbedUrl(url) {
 
 // ======= Comments API =======
 async function fetchCommentsAPI(resourceId, token) {
-  const res = await fetch(`${BASE_URL}/course-resources/${resourceId}/comments`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
+  const res = await fetch(
+    `${BASE_URL}/course-resources/${resourceId}/comments`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    }
+  );
   if (!res.ok) throw new Error(`Load comments failed (${res.status})`);
   const json = await res.json();
   return json.comments || [];
 }
 async function createCommentAPI(resourceId, text, parentId, token) {
-  const res = await fetch(`${BASE_URL}/course-resources/${resourceId}/comments`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ text, parent_id: parentId || null }),
-  });
+  const res = await fetch(
+    `${BASE_URL}/course-resources/${resourceId}/comments`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ text, parent_id: parentId || null }),
+    }
+  );
   if (!res.ok) throw new Error(`Post comment failed (${res.status})`);
   const { comment } = await res.json();
   return comment;
@@ -194,9 +201,12 @@ async function setCompleteAPI(resourceId, completed, token) {
 
 // ===== Assignment APIs (student) =====
 async function fetchMySubmissionAPI(assignmentId, token) {
-  const r = await fetch(`${BASE_URL}/assignments/${assignmentId}/submissions/me`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
+  const r = await fetch(
+    `${BASE_URL}/assignments/${assignmentId}/submissions/me`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    }
+  );
   if (!r.ok) return null;
 
   const json = await r.json();
@@ -365,16 +375,16 @@ export default function StudentWeekDetail() {
           it.id !== current.id
             ? it
             : {
-              ...it,
-              instructions: detail.instructions ?? it.instructions,
-              dueDate: detail.due_date ?? it.dueDate,
-              maxScore: detail.max_score ?? it.maxScore,
-              allowFile: toBool(
-                detail.allow_file !== undefined
-                  ? detail.allow_file
-                  : it.allowFile
-              ),
-            }
+                ...it,
+                instructions: detail.instructions ?? it.instructions,
+                dueDate: detail.due_date ?? it.dueDate,
+                maxScore: detail.max_score ?? it.maxScore,
+                allowFile: toBool(
+                  detail.allow_file !== undefined
+                    ? detail.allow_file
+                    : it.allowFile
+                ),
+              }
         )
       );
     })();
@@ -530,9 +540,9 @@ export default function StudentWeekDetail() {
             c.id !== parentId
               ? c
               : {
-                ...c,
-                replies: c.replies.map((r) => (r.id === id ? saved : r)),
-              }
+                  ...c,
+                  replies: c.replies.map((r) => (r.id === id ? saved : r)),
+                }
           )
         );
       }
@@ -797,18 +807,24 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                 return (
                   <div
                     key={s.idx}
-                    className={`step ${s.idx === active ? "active" : ""} ${locked ? "locked" : ""}`}
+                    className={`step ${s.idx === active ? "active" : ""} ${
+                      locked ? "locked" : ""
+                    }`}
                     onClick={() => {
                       if (!locked) {
                         setActive(s.idx);
                         setSideOpen(false);
                       }
                     }}
-                    title={locked ? "Selesaikan step sebelumnya lebih dulu" : ""}
+                    title={
+                      locked ? "Selesaikan step sebelumnya lebih dulu" : ""
+                    }
                     tabIndex={0}
                     role="button"
                   >
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div
+                      style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    >
                       <span className="idx">{s.idx + 1}.</span>
                       <span>{s.title}</span>
                     </div>
@@ -858,9 +874,18 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
             <div className="viewer">
               <div className="skel skel-title shimmer" />
               <div className="skel skel-line shimmer" />
-              <div className="skel skel-line shimmer" style={{ width: "90%" }} />
-              <div className="skel skel-line shimmer" style={{ width: "80%" }} />
-              <div className="skel skel-iframe shimmer" style={{ marginTop: 14 }} />
+              <div
+                className="skel skel-line shimmer"
+                style={{ width: "90%" }}
+              />
+              <div
+                className="skel skel-line shimmer"
+                style={{ width: "80%" }}
+              />
+              <div
+                className="skel skel-iframe shimmer"
+                style={{ marginTop: 14 }}
+              />
             </div>
           ) : current ? (
             <div className="viewer">
@@ -868,13 +893,11 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                 {`Step ${active + 1}: `}
                 {current.title || capitalize(current.type)}
               </h1>
-
               {current.type === "text" && (
                 <div style={{ lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                   {current.text}
                 </div>
               )}
-
               {current.type === "video" && (
                 <div>
                   {current.videoUrl && (
@@ -893,7 +916,39 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </div>
                 </div>
               )}
-
+              {current.type === "link" && (
+                <div>
+                  {current.url && (
+                    <div style={{ marginBottom: 8, opacity: 0.7 }}>
+                      {current.url}
+                    </div>
+                  )}
+                  {/* coba embed bila memungkinkan (YouTube dll), tetap sediakan tombol buka */}
+                  <div
+                    style={{
+                      aspectRatio: "16 / 9",
+                      width: "100%",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <iframe
+                      title={current.title || "Link"}
+                      src={buildEmbedUrl(current.url)}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+                  <a
+                    className="btn"
+                    href={current.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Link
+                  </a>
+                </div>
+              )}
               {current.type === "file" && (
                 <div>
                   <a
@@ -906,7 +961,53 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </a>
                 </div>
               )}
-
+              +{" "}
+              {current.type === "composite" && (
+                <div>
+                  {!!current.videoUrl && (
+                    <div
+                      style={{
+                        aspectRatio: "16 / 9",
+                        width: "100%",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <iframe
+                        title={current.title || "Video"}
+                        src={buildEmbedUrl(current.videoUrl)}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+                  {!!current.fileUrl && (
+                    <a
+                      className="btn"
+                      href={current.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ marginBottom: 10 }}
+                    >
+                      Open / Download file
+                    </a>
+                  )}
+                  {!!current.text && (
+                    <div
+                      style={{
+                        lineHeight: 1.7,
+                        whiteSpace: "pre-wrap",
+                        marginTop: 10,
+                      }}
+                    >
+                      {current.text}
+                    </div>
+                  )}
+                  {!current.videoUrl && !current.fileUrl && !current.text && (
+                    <div className="cmt-meta">No content.</div>
+                  )}
+                </div>
+              )}
               {current.type === "quiz" && (
                 <div>
                   <p className="cmt-meta">Quiz: {current.title}</p>
@@ -921,7 +1022,9 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   )}
 
                   <button
-                    className={`btn btn-primary ${lastAttempt?.status === "submitted" ? "disabled" : ""}`}
+                    className={`btn btn-primary ${
+                      lastAttempt?.status === "submitted" ? "disabled" : ""
+                    }`}
                     disabled={lastAttempt?.status === "submitted"}
                     onClick={async () => {
                       if (lastAttempt?.status === "submitted") return;
@@ -941,12 +1044,15 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
 
                       if (!quizId) {
                         try {
-                          const ref = await fetch(`${BASE_URL}/kelas/${classId}/weeks`, {
-                            headers: {
-                              Authorization: `Bearer ${token}`,
-                              Accept: "application/json",
-                            },
-                          });
+                          const ref = await fetch(
+                            `${BASE_URL}/kelas/${classId}/weeks`,
+                            {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                Accept: "application/json",
+                              },
+                            }
+                          );
                           if (ref.ok) {
                             const weeks = await ref.json();
                             const found = (weeks || [])
@@ -963,13 +1069,16 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                         }
                       }
 
-                      const r = await fetch(`${BASE_URL}/quizzes/${quizId}/attempts/start`, {
-                        method: "POST",
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          Accept: "application/json",
-                        },
-                      });
+                      const r = await fetch(
+                        `${BASE_URL}/quizzes/${quizId}/attempts/start`,
+                        {
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                            Accept: "application/json",
+                          },
+                        }
+                      );
                       if (!r.ok) {
                         const msg = await r.text().catch(() => "");
                         showHud(`Failed to start: ${r.status} ${msg}`);
@@ -1002,7 +1111,6 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   )}
                 </div>
               )}
-
               {current.type === "assignment" && (
                 <div style={{ lineHeight: 1.7 }}>
                   <div className="cmt-meta" style={{ marginBottom: 8 }}>
@@ -1015,7 +1123,9 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </div>
 
                   {current.instructions && (
-                    <section style={{ whiteSpace: "pre-wrap", marginBottom: 14 }}>
+                    <section
+                      style={{ whiteSpace: "pre-wrap", marginBottom: 14 }}
+                    >
                       {current.instructions}
                     </section>
                   )}
@@ -1149,7 +1259,6 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </div>
                 </div>
               )}
-
               {/* Controls */}
               <div className="controls">
                 <button
@@ -1161,7 +1270,9 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                 </button>
 
                 <button
-                  className={`btn ${steps[active]?.completed ? "" : "btn-primary"}`}
+                  className={`btn ${
+                    steps[active]?.completed ? "" : "btn-primary"
+                  }`}
                   onClick={() => toggleComplete(current.id)}
                   title="Tandai materi ini selesai"
                 >
@@ -1197,13 +1308,14 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                     onClick={() =>
                       setActive((i) => Math.min(items.length - 1, i + 1))
                     }
-                    title={!isUnlocked(active + 1) ? "Selesaikan step ini dulu" : ""}
+                    title={
+                      !isUnlocked(active + 1) ? "Selesaikan step ini dulu" : ""
+                    }
                   >
                     Next
                   </button>
                 )}
               </div>
-
               {/* Discussion */}
               <Discussion
                 comments={comments}
@@ -1247,7 +1359,9 @@ function Discussion({
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
         />
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+        <div
+          style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}
+        >
           <button className="btn btn-primary" onClick={addComment}>
             Post
           </button>
@@ -1307,7 +1421,9 @@ function CommentItem({
       <div className="cmt-head">
         <div>
           {data.author}{" "}
-          {data.role === "dosen" && <span className="cmt-meta">• Lecturer</span>}
+          {data.role === "dosen" && (
+            <span className="cmt-meta">• Lecturer</span>
+          )}
           <div className="cmt-meta">
             {new Date(data.createdAt).toLocaleString()}
             {typeof data.score === "number" && (
@@ -1425,7 +1541,9 @@ function ReplyItem({ data, onEdit, onDelete }) {
       <div className="cmt-head">
         <div>
           {data.author}{" "}
-          {data.role === "dosen" && <span className="cmt-meta">• Lecturer</span>}
+          {data.role === "dosen" && (
+            <span className="cmt-meta">• Lecturer</span>
+          )}
           <div className="cmt-meta">
             {new Date(data.createdAt).toLocaleString()}
             {typeof data.score === "number" && (
