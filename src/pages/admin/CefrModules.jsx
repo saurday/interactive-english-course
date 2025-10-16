@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/* ===== Config ===== */
+/* ===== Config (pakai wrapper API) ===== */
 import api from "@/config/api";
 
 /* ===== Small UI ===== */
@@ -157,12 +157,17 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await api.get(`/api/placement/contents`);
+        const { data } = await api.get(`/api/placement/contents`);
+        const payload = data;
         setResources(
-          Array.isArray(j?.contents) ? j.contents : Array.isArray(j) ? j : []
+          Array.isArray(payload?.contents)
+            ? payload.contents
+            : Array.isArray(payload)
+            ? payload
+            : []
         );
       } catch (e) {
-        setErr(e?.response?.data?.message || e.message || "Failed to load modules");
+        setErr(e?.message || "Failed to load modules");
       } finally {
         setLoading(false);
       }
@@ -183,7 +188,6 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
   }, [resources, q, type]);
 
   /* Group by LEVEL (bukan week) */
-  // grouping & sorting
   const groups = useMemo(() => {
     const m = new Map();
     list.forEach((r) => {
