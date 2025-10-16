@@ -186,8 +186,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
         roleFilter && roleFilter !== "all"
           ? `/users?role=${encodeURIComponent(roleFilter)}`
           : `/users`;
-      const { data: j } = await get(url);
-      setUsers(Array.isArray(j) ? j : j?.data || []);
+      const j = await get(url);
+      const list = Array.isArray(j) ? j : j?.data ?? j?.users ?? [];
+      setUsers(list);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e?.message;
       setErr(msg || "Failed to load users");
@@ -251,14 +252,14 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       password: password.trim(),
       role,
     };
-    const { data: j } = await post(`/users`, payload);
-    return j; // data user baru
+    const j = await post(`/users`, payload);
+    return j; // langsung kembalikan objek user (kalau kamu butuh)
   };
 
   // UPDATE user -> PUT /api/users/:id
   const updateUser = async (id, body) => {
-    const { data: j } = await put(`/users/${id}`, body);
-    return j; // data user ter‐update
+    const j = await put(`/users/${id}`, body);
+    return j;
   };
 
   // open add/edit modals
