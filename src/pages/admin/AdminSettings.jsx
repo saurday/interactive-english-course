@@ -108,7 +108,7 @@ export default function AdminSettings() {
       setLoading(true);
       try {
         // ⬇️ CUKUP "/users/:id" (baseURL sudah mengandung /api)
-        const { data: u } = await get(`/users/${userId}`);
+        const u = await get(`/users/${userId}`);
         setName(u?.name || "");
         setEmail(u?.email || "");
       } catch (e) {
@@ -171,7 +171,7 @@ export default function AdminSettings() {
       }
 
       // ⬇️ PUT via helper; baseURL sudah /api
-      const { data: j } = await put(`/users/${userId}`, body);
+      const j = await put(`/users/${userId}`, body);
 
       // perbarui localStorage userInfo
       try {
