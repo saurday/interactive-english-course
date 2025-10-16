@@ -25,8 +25,12 @@ import { NavLink, useNavigate } from "react-router-dom";
 /* ----- Config (pakai wrapper API) ----- */
 import api from "@/config/api";
 
-const roleToBadge = (r) =>
-  r === "mahasiswa" ? "STUDENT" : r === "dosen" ? "LECTURE" : "ADMIN";
+const roleToBadge = (r) => {
+  if (r === "mahasiswa") return "STUDENT";
+  if (r === "dosen") return "LECTURE";
+  return "ADMIN";
+};
+
 
 /* ----- Small UI ----- */
 const Pill = ({ children }) => (
