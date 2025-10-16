@@ -45,7 +45,7 @@ export default function AdminUsers() {
   async function load() {
     try {
       setLoading(true);
-      const data = await get("/api/users");
+      const data = await get("/users");
       const arr = Array.isArray(data) ? data : data?.data || [];
       // map role API -> UI
       setUsers(
@@ -74,7 +74,7 @@ export default function AdminUsers() {
 
   async function onDelete(id) {
     if (!window.confirm("Delete this user?")) return;
-    await del(`/api/users/${id}`);
+    await del(`/users/${id}`);
     setUsers((s) => s.filter((x) => x.id !== id));
   }
 
@@ -84,7 +84,7 @@ export default function AdminUsers() {
     try {
       setSaving(true);
       const isEdit = modal.mode === "edit";
-      const url = isEdit ? `/api/users/${modal.data.id}` : `/api/users`;
+      const url = isEdit ? `/users/${modal.data.id}` : `/users`;
 
       const payload = {
         name: modal.data.name,
