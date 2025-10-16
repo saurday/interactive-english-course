@@ -961,7 +961,7 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
                   </a>
                 </div>
               )}
-              +{" "}
+              {" "}
               {current.type === "composite" && (
                 <div>
                   {!!current.videoUrl && (
