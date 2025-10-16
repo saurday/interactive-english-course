@@ -1,3 +1,4 @@
+// src/pages/admin/AdminCefrModules.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
@@ -13,8 +14,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/* ===== Config (pakai wrapper API) ===== */
-import api from "@/config/api";
+/* ===== API (named imports) ===== */
+import { get, ApiError } from "@/config/api";
 
 /* ===== Small UI ===== */
 const Pill = ({ children }) => (
@@ -61,7 +62,7 @@ export default function AdminCefrModules() {
   /* UI: search & filter */
   const [q, setQ] = useState("");
   const [type, setType] = useState("all"); // all|text|video|file|quiz|assignment|composite
-  const [expanded, setExpanded] = useState({}); // {weekNumber: boolean}
+  const [expanded, setExpanded] = useState({}); // {levelKey: boolean}
 
   /* ===== Styles ===== */
   useEffect(() => {
@@ -77,11 +78,11 @@ body{ font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetic
 .admin-layout{
   display:flex; min-height:100vh;
   background: radial-gradient(1200px 400px at 80% -120px, rgba(124,58,237,.06), transparent 60%), var(--bg);
-  overflow-x:hidden;                    /* ⬅ cegah melebar ke samping */
+  overflow-x:hidden;
 }
 .sidebar{
-  width:260px;                           /* ⬅ sedikit lebih lega */
-  flex:0 0 260px;                        /* ⬅ JANGAN menyusut di flex */
+  width:260px;
+  flex:0 0 260px;
   background:#fff; border-right:1px solid #e2e8f0;
   position:sticky; top:0; height:100vh; padding:14px; z-index:40
 }
@@ -92,7 +93,7 @@ body{ font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetic
 button.menu-item{ background:transparent; border:0; width:100%; text-align:left; cursor:pointer }
 
 .content{
-  flex:1 1 auto; min-width:0;           /* ⬅ biar tidak memaksa lebar & bisa shrink */
+  flex:1 1 auto; min-width:0;
   padding:20px; max-width:1100px; width:100%; margin:0 auto;
 }
 .topbar{display:flex; align-items:center; justify-content:space-between; gap:10px}
@@ -135,7 +136,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
 .item-title{ font-weight:800 }
 .item-desc{
   font-size:12px; color:#64748b; margin-top:4px; max-width:760px;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;  /* ⬅ rapi & tidak meluber */
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
 
 @media (max-width: 1024px){
@@ -145,7 +146,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
   .sidebar{ position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .25s ease }
   .sidebar.open{ transform:translateX(0) }
   .hamburger{ display:inline-flex }
-  .item{ grid-template-columns:1fr }     /* ⬅ 1 kolom di mobile */
+  .item{ grid-template-columns:1fr }
   .counts{ width:100% }
 }
 `}</style>
@@ -157,17 +158,13 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data } = await api.get(`/api/placement/contents`);
-        const payload = data;
+        const { data: j } = await get("/api/placement/contents");
         setResources(
-          Array.isArray(payload?.contents)
-            ? payload.contents
-            : Array.isArray(payload)
-            ? payload
-            : []
+          Array.isArray(j?.contents) ? j.contents : Array.isArray(j) ? j : []
         );
       } catch (e) {
-        setErr(e?.message || "Failed to load modules");
+        const msg = e instanceof ApiError ? e.message : e?.message;
+        setErr(msg || "Failed to load modules");
       } finally {
         setLoading(false);
       }
