@@ -10,15 +10,19 @@ import {
   User,
   Shield,
 } from "lucide-react";
-
-/* ---- Config ---- */
-import api from "@/config/api";
+import { get, post, put, del } from "@/config/api";
 
 const ROLES = [
   { value: "student", label: "Student" },
   { value: "lecture", label: "Lecture" },
   { value: "admin", label: "Admin" },
 ];
+
+// Normalisasi role antara UI dan API (tanpa mengubah tampilan)
+const apiToUiRole = (r) =>
+  r === "mahasiswa" ? "student" : r === "dosen" ? "lecture" : r || "";
+const uiToApiRole = (r) =>
+  r === "student" ? "mahasiswa" : r === "lecture" ? "dosen" : r || "";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -41,8 +45,15 @@ export default function AdminUsers() {
   async function load() {
     try {
       setLoading(true);
-      const { data: j } = await api.get(`/api/users`);
-      setUsers(Array.isArray(j) ? j : j?.data || []);
+      const data = await get("/api/users");
+      const arr = Array.isArray(data) ? data : data?.data || [];
+      // map role API -> UI
+      setUsers(
+        arr.map((u) => ({
+          ...u,
+          role: apiToUiRole(u.role),
+        }))
+      );
     } finally {
       setLoading(false);
     }
@@ -63,10 +74,8 @@ export default function AdminUsers() {
 
   async function onDelete(id) {
     if (!window.confirm("Delete this user?")) return;
-    const r = await api.delete(`/api/users/${id}`);
-    if (r.status === 200 || r.status === 204) {
-      setUsers((s) => s.filter((x) => x.id !== id));
-    }
+    await del(`/api/users/${id}`);
+    setUsers((s) => s.filter((x) => x.id !== id));
   }
 
   async function onSubmit(e) {
@@ -75,32 +84,31 @@ export default function AdminUsers() {
     try {
       setSaving(true);
       const isEdit = modal.mode === "edit";
+      const url = isEdit ? `/api/users/${modal.data.id}` : `/api/users`;
 
       const payload = {
         name: modal.data.name,
         email: modal.data.email,
-        role: modal.data.role,
+        role: uiToApiRole(modal.data.role), // kirim format API
       };
       if (!isEdit || modal.data.password)
         payload.password = modal.data.password;
 
-      let j;
-      if (isEdit) {
-        const { data } = await api.put(`/api/users/${modal.data.id}`, payload);
-        j = data;
-      } else {
-        const { data } = await api.post(`/api/users`, payload);
-        j = data;
-      }
+      const res = isEdit
+        ? await put(url, payload)
+        : await post(url, payload);
+
+      // normalisasi role utk kembali ke UI
+      const normalized = { ...res, role: apiToUiRole(res.role) };
 
       if (isEdit) {
-        setUsers((s) => s.map((x) => (x.id === modal.data.id ? j : x)));
+        setUsers((s) => s.map((x) => (x.id === modal.data.id ? normalized : x)));
       } else {
-        setUsers((s) => [j, ...s]);
+        setUsers((s) => [normalized, ...s]);
       }
       onClose();
     } catch (err) {
-      alert(err?.response?.data?.message || err.message || "Save failed");
+      alert(err?.message || "Save failed");
     } finally {
       setSaving(false);
     }
