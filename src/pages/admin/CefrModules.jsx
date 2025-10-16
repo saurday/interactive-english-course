@@ -35,7 +35,7 @@ const Pill = ({ children }) => (
 export default function AdminCefrModules() {
   const navigate = useNavigate();
 
-  /* Sidebar (pakai menu admin agar konsisten dengan screenshot) */
+  /* Sidebar (pakai menu admin agar konsisten) */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebar = [
     { label: "Dashboard", to: "/admin", icon: <LayoutDashboard size={18} /> },
@@ -158,9 +158,15 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await get("/placement/contents");
+        // get() mengembalikan payload langsung, bukan { data }
+        const j = await get("/placement/contents");
+        const arr = Array.isArray(j?.contents) ? j.contents : (Array.isArray(j) ? j : []);
+        // normalisasi tipe ke lowercase agar filter/aksi konsisten
         setResources(
-          Array.isArray(j?.contents) ? j.contents : Array.isArray(j) ? j : []
+          arr.map((r) => ({
+            ...r,
+            type: (r.type || "").toLowerCase(),
+          }))
         );
       } catch (e) {
         const msg = e instanceof ApiError ? e.message : e?.message;
@@ -175,7 +181,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
     return resources
-      .filter((r) => (type === "all" ? true : r.type === type))
+      .filter((r) => (type === "all" ? true : (r.type || "").toLowerCase() === type))
       .filter((r) =>
         !term
           ? true
@@ -184,11 +190,11 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       );
   }, [resources, q, type]);
 
-  /* Group by LEVEL (bukan week) */
+  /* Group by LEVEL */
   const groups = useMemo(() => {
     const m = new Map();
     list.forEach((r) => {
-      const k = r.level_code || `Level ${r.level_id}`;
+      const k = r.level_code || `Level ${r.level_id ?? ""}`;
       if (!m.has(k))
         m.set(k, { level: k, level_name: r.level_name, items: [] });
       m.get(k).items.push(r);
@@ -282,8 +288,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
           </div>
 
           <div className="sub">
-            Browse learning materials by week. Search, filter, and open
-            resources.
+            Browse learning materials by <b>level</b>. Search, filter, and open resources.
           </div>
 
           {/* Toolbar */}
@@ -363,10 +368,11 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
               <div style={{ padding: 14, color: "#64748b" }}>No contents.</div>
             ) : (
               groups.map(({ level, level_name, items }) => {
-                const counts = items.reduce(
-                  (acc, r) => ((acc[r.type] = (acc[r.type] || 0) + 1), acc),
-                  {}
-                );
+                const counts = items.reduce((acc, r) => {
+                  const t = (r.type || "").toLowerCase();
+                  acc[t] = (acc[t] || 0) + 1;
+                  return acc;
+                }, {});
                 const isOpen = expanded[level] ?? true;
                 return (
                   <section className="week" key={level}>
@@ -407,9 +413,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                             </div>
                             {!!r.text && (
                               <div className="item-desc">
-                                {String(r.text)
-                                  .replace(/\s+/g, " ")
-                                  .slice(0, 160)}
+                                {String(r.text).replace(/\s+/g, " ").slice(0, 160)}
                               </div>
                             )}
                           </div>
@@ -428,10 +432,12 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                               gap: 8,
                               alignItems: "center",
                               justifyContent: "flex-end",
+                              flexWrap: "wrap",
                             }}
                           >
                             {(r.type === "video" ||
-                              (r.type === "composite" && r.video_url)) &&
+                              ((r.type || "").toLowerCase() === "composite" &&
+                                r.video_url)) &&
                               r.video_url && (
                                 <a
                                   className="pill-link"
@@ -443,7 +449,8 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                 </a>
                               )}
                             {(r.type === "file" ||
-                              (r.type === "composite" && r.file_url)) &&
+                              ((r.type || "").toLowerCase() === "composite" &&
+                                r.file_url)) &&
                               r.file_url && (
                                 <a
                                   className="pill-link"
@@ -454,23 +461,22 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                   Open File
                                 </a>
                               )}
-                            {(r.type === "text" ||
-                              (r.type === "composite" &&
+                            {(((r.type || "").toLowerCase() === "text") ||
+                              ((r.type || "").toLowerCase() === "composite" &&
                                 !r.video_url &&
                                 !r.file_url)) && (
-                              <span
-                                className="pill-link"
-                                style={{ pointerEvents: "none" }}
-                              >
+                              <span className="pill-link" style={{ pointerEvents: "none" }}>
                                 Text only
                               </span>
                             )}
-                            {r.type === "quiz" && r.quiz_id && (
-                              <span
-                                className="pill-link"
-                                style={{ pointerEvents: "none" }}
-                              >
+                            {(r.type || "").toLowerCase() === "quiz" && r.quiz_id && (
+                              <span className="pill-link" style={{ pointerEvents: "none" }}>
                                 Quiz #{r.quiz_id}
+                              </span>
+                            )}
+                            {(r.type || "").toLowerCase() === "assignment" && r.assignment_id && (
+                              <span className="pill-link" style={{ pointerEvents: "none" }}>
+                                Assignment #{r.assignment_id}
                               </span>
                             )}
                           </div>
