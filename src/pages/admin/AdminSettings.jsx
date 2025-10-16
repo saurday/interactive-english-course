@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 /* ====== Config & helpers ====== */
-import api from "@/config/api";
+import { get, put } from "@/config/api";
 
 const getUserId = () => {
   try {
@@ -106,7 +106,7 @@ export default function AdminSettings() {
     (async () => {
       setLoading(true);
       try {
-        const { data: u } = await api.get(`/api/users/${userId}`);
+        const u = await get(`/api/users/${userId}`);
         setName(u.name || "");
         setEmail(u.email || "");
       } catch (e) {
@@ -168,7 +168,7 @@ export default function AdminSettings() {
         body.password_confirmation = newPwd2;
       }
 
-      const { data: j } = await api.put(`/api/users/${userId}`, body);
+      const j = await put(`/api/users/${userId}`, body);
 
       // perbarui localStorage userInfo
       try {
