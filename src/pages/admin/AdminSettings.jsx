@@ -103,14 +103,18 @@ export default function AdminSettings() {
 
   // fetch dari server untuk kebenaran data
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       try {
-        // ⬇️ CUKUP "/users/:id" (baseURL sudah mengandung /api)
         const u = await get(`/users/${userId}`);
-        setName(u?.name || "");
-        setEmail(u?.email || "");
+
+        const user = u?.id ? u : u?.data ?? u?.user ?? {};
+        setName(user?.name || "");
+        setEmail(user?.email || "");
       } catch (e) {
         setMsg({
           type: "error",
