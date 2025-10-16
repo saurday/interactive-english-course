@@ -19,7 +19,7 @@ import {
   Target,
 } from "lucide-react";
 
-/* ====== Config & helpers ====== */
+/* ====== Config (pakai api wrapper) ====== */
 import api from "@/config/api";
 
 /* Small UI */
@@ -183,17 +183,18 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     `}</style>
   );
 
-  /* ====== load data (khusus mahasiswa + progres) ====== */
+  /* ====== load data (pakai api) ====== */
   useEffect(() => {
     (async () => {
       setLoading(true);
       setErr(null);
       try {
         const { data: j } = await api.get(`/api/admin/students/progress`);
-        setStudents(Array.isArray(j.students) ? j.students : []);
-        setTotalResources(j.total_resources || 0);
+        setStudents(Array.isArray(j?.students) ? j.students : []);
+        setTotalResources(j?.total_resources || 0);
       } catch (e) {
-        setErr(e?.response?.data?.message || e.message || "Failed to load");
+        const msg = e?.response?.data?.message || e?.message || "Failed to load";
+        setErr(msg);
       } finally {
         setLoading(false);
       }
@@ -205,18 +206,17 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     setResErr(null);
     try {
       const { data: j } = await api.get(`/api/course-resources`);
-      const arr = Array.isArray(j.resources)
+      const arr = Array.isArray(j?.resources)
         ? j.resources
         : Array.isArray(j)
         ? j
         : [];
       setResources(arr);
-      // sekalian sinkronkan counter di chip
-      setTotalResources(j.total ?? arr.length);
+      setTotalResources(j?.total ?? arr.length);
     } catch (e) {
-      setResErr(
-        e?.response?.data?.message || e.message || "Failed to load resources"
-      );
+      const msg =
+        e?.response?.data?.message || e?.message || "Failed to load resources";
+      setResErr(msg);
     } finally {
       setResLoading(false);
     }
@@ -380,7 +380,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
 
           {/* CONTENT SWITCH */}
           {view === "students" ? (
-            // ====== TABEL STUDENTS (kode lama kamu, dipertahankan) ======
+            // ====== TABEL STUDENTS ======
             <div
               className="table-wrap card hoverable"
               style={{ padding: 12, marginTop: 14 }}
@@ -511,7 +511,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
               )}
             </div>
           ) : (
-            // ====== TABEL RESOURCES (tab baru) ======
+            // ====== TABEL RESOURCES ======
             <div
               className="table-wrap card hoverable"
               style={{ padding: 12, marginTop: 14 }}
