@@ -19,8 +19,8 @@ import {
   Target,
 } from "lucide-react";
 
-/* ====== Config (pakai api wrapper) ====== */
-import api from "@/config/api";
+/* ====== API (named imports) ====== */
+import { get, ApiError } from "@/config/api";
 
 /* Small UI */
 const Stat = ({ icon, label, value, sub }) => (
@@ -167,6 +167,9 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
 }
 .pill-link:hover{ background:#f3f0ff; border-color:#e9d5ff; }
 
+/* Error badge (dipakai resErr) */
+.err{margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b}
+
 /* Responsive sidebar like dashboard */
 @media (max-width: 768px){
   .sidebar{position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .25s ease}
@@ -183,18 +186,18 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     `}</style>
   );
 
-  /* ====== load data (pakai api) ====== */
+  /* ====== load data (khusus mahasiswa + progres) ====== */
   useEffect(() => {
     (async () => {
       setLoading(true);
       setErr(null);
       try {
-        const { data: j } = await api.get(`/api/admin/students/progress`);
+        const { data: j } = await get("/api/admin/students/progress");
         setStudents(Array.isArray(j?.students) ? j.students : []);
         setTotalResources(j?.total_resources || 0);
       } catch (e) {
-        const msg = e?.response?.data?.message || e?.message || "Failed to load";
-        setErr(msg);
+        const msg = e instanceof ApiError ? e.message : e?.message;
+        setErr(msg || "Failed to load");
       } finally {
         setLoading(false);
       }
@@ -205,18 +208,14 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     setResLoading(true);
     setResErr(null);
     try {
-      const { data: j } = await api.get(`/api/course-resources`);
-      const arr = Array.isArray(j?.resources)
-        ? j.resources
-        : Array.isArray(j)
-        ? j
-        : [];
+      const { data: j } = await get("/api/course-resources");
+      const arr = Array.isArray(j?.resources) ? j.resources : Array.isArray(j) ? j : [];
       setResources(arr);
+      // sinkronkan counter di chip
       setTotalResources(j?.total ?? arr.length);
     } catch (e) {
-      const msg =
-        e?.response?.data?.message || e?.message || "Failed to load resources";
-      setResErr(msg);
+      const msg = e instanceof ApiError ? e.message : e?.message;
+      setResErr(msg || "Failed to load resources");
     } finally {
       setResLoading(false);
     }
@@ -227,7 +226,8 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     if (view === "resources" && resources.length === 0 && !resLoading) {
       fetchResources();
     }
-  }, [view]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   // hanya mahasiswa
   const filtered = useMemo(() => {
@@ -511,7 +511,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
               )}
             </div>
           ) : (
-            // ====== TABEL RESOURCES ======
+            // ====== TABEL RESOURCES (tab baru) ======
             <div
               className="table-wrap card hoverable"
               style={{ padding: 12, marginTop: 14 }}
@@ -633,7 +633,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
                                 </td>
 
                                 <td className="td">
-                                  <Pill>{r.type.toUpperCase()}</Pill>
+                                  <Pill>{(r.type || "").toUpperCase()}</Pill>
                                 </td>
                                 <td className="td">
                                   Week {r.week_number ?? r.week_id}
