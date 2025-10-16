@@ -20,7 +20,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 /* ---------- Config (pakai wrapper API) ---------- */
-import { get, post } from "@/CONFIG/API";
+import { get, post } from "@/config/api";
 
 /* ---------- Helpers ---------- */
 const toRoleLabel = (role) =>
