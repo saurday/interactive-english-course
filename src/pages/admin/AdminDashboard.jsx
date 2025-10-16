@@ -109,8 +109,7 @@ export default function AdminDashboard() {
         const users = Array.isArray(usersResp)
           ? usersResp
           : usersResp?.data ?? [];
-          
-        
+
         // Hitung total & breakdown role
         const total = users.length;
         const students = users.filter((u) => u.role === "mahasiswa").length;
@@ -215,11 +214,11 @@ export default function AdminDashboard() {
     setSavingUser(true);
     setMsg(null);
     try {
-      const { data: j } = await post(`/users`, {
+      const j = await post(`/users`, {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password.trim(),
-        role: form.role, // 'mahasiswa' | 'dosen' | 'admin'
+        role: form.role,
       });
 
       // refresh ringan
