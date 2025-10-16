@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "@/config/api";
+import { get } from "@/config/api";
 
 function Bar({ value = 0 }) {
   return (
@@ -35,9 +35,11 @@ export default function AdminProgress() {
 
         for (const url of tries) {
           try {
-            const { data } = await api.get(url);
-            ok = data;
-            break;
+            const data = await get(url);
+            if (data) {
+              ok = data;
+              break;
+            }
           } catch {
             /* ignore and try next */
           }
