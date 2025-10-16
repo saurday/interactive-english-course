@@ -679,7 +679,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
               <div>
                 <button
                   className="btn btn-primary btn-sm"
-                  onClick={() => navigate("/lecture/cefr")}
+                  onClick={() => navigate("/admin/cefrmodules")}
                 >
                   <BookOpen size={16} /> Open Modules
                 </button>
