@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
-/* ----- Config & helpers ----- */
+/* ----- Config (pakai wrapper API) ----- */
 import api from "@/config/api";
 
 const roleToBadge = (r) =>
@@ -176,19 +176,22 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     `}</style>
   );
 
-  /* ======= DATA ======= */
+  /* ======= DATA (pakai api) ======= */
   const fetchUsers = async (roleFilter = role) => {
     setLoading(true);
     setErr(null);
     try {
-      const url =
-        roleFilter && roleFilter !== "all"
-          ? `/api/users?role=${encodeURIComponent(roleFilter)}`
-          : `/api/users`;
-      const { data: j } = await api.get(url);
-      setUsers(Array.isArray(j) ? j : []);
+      const { data } = await api.get(`/api/users`, {
+        params: roleFilter !== "all" ? { role: roleFilter } : undefined,
+      });
+      const list = Array.isArray(data) ? data : data?.data || [];
+      setUsers(list);
     } catch (e) {
-      setErr(e?.response?.data?.message || e.message || "Failed to load users");
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to load users";
+      setErr(msg);
     } finally {
       setLoading(false);
     }
@@ -217,7 +220,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  /* ======= ACTIONS ======= */
+  /* ======= ACTIONS (pakai api) ======= */
   const handleLogout = () => {
     try {
       localStorage.clear();
@@ -233,7 +236,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       await api.delete(`/api/users/${u.id}`);
       setUsers((arr) => arr.filter((x) => x.id !== u.id));
     } catch (e) {
-      alert(e?.response?.data?.message || e.message || "Failed to delete");
+      alert(e?.response?.data?.message || e?.message || "Failed to delete");
     } finally {
       setBusy(false);
     }
@@ -247,30 +250,14 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       password: password.trim(),
       role,
     };
-    try {
-      const { data: j } = await api.post(`/api/users`, payload);
-      return j; // data user baru
-    } catch (e) {
-      const j = e?.response?.data;
-      const msg =
-        j?.message ||
-        (j?.errors ? Object.values(j.errors).flat().join(", ") : e.message);
-      throw new Error(msg);
-    }
+    const { data } = await api.post(`/api/users`, payload);
+    return data; // data user baru
   };
 
   // UPDATE user -> PUT /api/users/:id
   const updateUser = async (id, body) => {
-    try {
-      const { data: j } = await api.put(`/api/users/${id}`, body);
-      return j; // data user ter‐update
-    } catch (e) {
-      const j = e?.response?.data;
-      const msg =
-        j?.message ||
-        (j?.errors ? Object.values(j.errors).flat().join(", ") : e.message);
-      throw new Error(msg);
-    }
+    const { data } = await api.put(`/api/users/${id}`, body);
+    return data; // data user ter-update
   };
 
   // open add/edit modals
@@ -336,7 +323,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       setForm({ name: "", email: "", password: "", role: "mahasiswa" });
       await fetchUsers(role);
     } catch (err) {
-      alert(err.message || "Action failed");
+      alert(err?.response?.data?.message || err.message || "Action failed");
     } finally {
       setSaving(false);
     }
