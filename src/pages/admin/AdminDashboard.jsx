@@ -105,11 +105,12 @@ export default function AdminDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const { data: usersResp } = await get(`/users`);
+        const usersResp = await get(`/users`);
         const users = Array.isArray(usersResp)
           ? usersResp
           : usersResp?.data ?? [];
-
+          
+        
         // Hitung total & breakdown role
         const total = users.length;
         const students = users.filter((u) => u.role === "mahasiswa").length;
