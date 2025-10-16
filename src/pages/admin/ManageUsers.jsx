@@ -233,7 +233,7 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
     if (!window.confirm(`Delete user "${u.name}" ?`)) return;
     setBusy(true);
     try {
-      await del(`/api/users/${u.id}`);
+      await del(`/users/${u.id}`);
       setUsers((arr) => arr.filter((x) => x.id !== u.id));
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e?.message;
@@ -251,13 +251,13 @@ button.menu-item{ background:transparent; border:0; width:100%; text-align:left;
       password: password.trim(),
       role,
     };
-    const { data: j } = await post(`/api/users`, payload);
+    const { data: j } = await post(`/users`, payload);
     return j; // data user baru
   };
 
   // UPDATE user -> PUT /api/users/:id
   const updateUser = async (id, body) => {
-    const { data: j } = await put(`/api/users/${id}`, body);
+    const { data: j } = await put(`/users/${id}`, body);
     return j; // data user ter‐update
   };
 
