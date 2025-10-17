@@ -46,7 +46,8 @@ const getUserId = () => {
     return "anon";
   }
 };
-const progKey = (levelId, uid = getUserId()) => `cefr:progress:l${levelId}:u${uid}`;
+const progKey = (levelId, uid = getUserId()) =>
+  `cefr:progress:l${levelId}:u${uid}`;
 const readProgress = (levelId) => {
   try {
     return JSON.parse(localStorage.getItem(progKey(levelId)) || "{}");
@@ -75,14 +76,16 @@ function toYouTubeEmbed(raw) {
       if (v) return `https://www.youtube.com/embed/${v}`;
       if (u.pathname.startsWith("/embed/")) return raw;
       const parts = u.pathname.split("/").filter(Boolean);
-      if (parts[0] === "shorts" && parts[1]) return `https://www.youtube.com/embed/${parts[1]}`;
+      if (parts[0] === "shorts" && parts[1])
+        return `https://www.youtube.com/embed/${parts[1]}`;
     }
   } catch {
     // ignore URL parsing errors
   }
   return raw;
 }
-const buildEmbedUrl = (url) => (!url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url);
+const buildEmbedUrl = (url) =>
+  !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
 function prepareEmbedSrc(rawUrl) {
   const url = String(rawUrl || "");
@@ -91,7 +94,10 @@ function prepareEmbedSrc(rawUrl) {
   if (url.includes("docs.google.com/presentation")) {
     let src = url;
     if (/(\/edit|\/present)/.test(src)) {
-      src = src.replace(/\/(edit|present).*$/, "/embed?start=false&loop=false&delayms=3000");
+      src = src.replace(
+        /\/(edit|present).*$/,
+        "/embed?start=false&loop=false&delayms=3000"
+      );
     }
     if (/\/pub(\?|$)/.test(src)) {
       src = src.replace(/\/pub(\?|$)/, "/embed?");
@@ -124,10 +130,13 @@ function prepareEmbedSrc(rawUrl) {
     return { type: "image", src: url, open: url };
   if (["mp4", "webm", "ogg", "m3u8"].includes(ext))
     return { type: "video", src: url, open: url };
-  if (["mp3", "wav", "oga", "ogg"].includes(ext)) return { type: "audio", src: url, open: url };
+  if (["mp3", "wav", "oga", "ogg"].includes(ext))
+    return { type: "audio", src: url, open: url };
   if (ext === "pdf") return { type: "iframe", src: url, open: url };
   if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
-    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+      url
+    )}`;
     return { type: "iframe", src: office, open: url };
   }
   return { type: "iframe", src: url, open: url };
@@ -136,10 +145,19 @@ function FileViewer({ url, title = "File" }) {
   const { type, src, open } = useMemo(() => prepareEmbedSrc(url), [url]);
   if (!url) return null;
   if (type === "image")
-    return <img src={src} alt={title} style={{ maxWidth: "100%", borderRadius: 12 }} />;
+    return (
+      <img
+        src={src}
+        alt={title}
+        style={{ maxWidth: "100%", borderRadius: 12 }}
+      />
+    );
   if (type === "video")
-    return <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />;
-  if (type === "audio") return <audio src={src} controls style={{ width: "100%" }} />;
+    return (
+      <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />
+    );
+  if (type === "audio")
+    return <audio src={src} controls style={{ width: "100%" }} />;
   if (type === "iframe")
     return (
       <div>
@@ -151,7 +169,12 @@ function FileViewer({ url, title = "File" }) {
           allowFullScreen
         />
         <div style={{ marginTop: 8 }}>
-          <a className="btn" href={open || src} target="_blank" rel="noreferrer">
+          <a
+            className="btn"
+            href={open || src}
+            target="_blank"
+            rel="noreferrer"
+          >
             Open original
           </a>
         </div>
@@ -263,8 +286,12 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
 
 /* hero */
 .hero{ background: radial-gradient(1200px 400px at 80% -20%, rgba(255,255,255,.25), transparent 60%), var(--violet); color:#fff; border-radius:18px; padding:22px; box-shadow: 0 10px 24px rgba(107,70,193,.20); }
-.hero h2{ margin: 0 0 6px; font-weight: 800; font-size: clamp(18px, 2vw + 6px, 24px); }
-.hero p{ margin: 8px 0 14px; opacity: .95; line-height: 1.6; }
+
+.hero h2{ margin: 0 0 6px; font-weight: 800; font-size: clamp(16px, 1.4vw + 6px, 20px); }
+.hero p{ margin: 6px 0 12px; opacity: .95; line-height: 1.55; font-size: 0.95rem; }
+
+.right .hero{ padding:18px; border-radius:16px; }
+.right .hero .btn{ padding:8px 12px; font-size:0.95rem; border-radius:10px; }
 
 /* titles & text */
 .title{ font-size: clamp(24px, 2vw + 8px, 34px); font-weight:800; margin:0 0 10px; }
@@ -321,14 +348,16 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
             <>
               <div className="skel skel-title shimmer" />
               <div className="skel skel-line shimmer" />
-              <div className="skel skel-line shimmer" style={{ width: "80%" }} />
+              <div
+                className="skel skel-line shimmer"
+                style={{ width: "80%" }}
+              />
             </>
           ) : !latest ? (
-            <div className="hero" style={{ padding: 14 }}>
-              <div style={{ fontWeight: 800, marginBottom: 4, color: "#fff" }}>Start Test</div>
-              <button className="btn" style={{ background: "#fff" }} onClick={startPlacement}>
-                Test Now
-              </button>
+            <div className="subtle" style={{ lineHeight: 1.6 }}>
+              There is no content here yet because you haven’t taken the
+              Placement Test. Once you complete the test, your CEFR level will
+              unlock the appropriate modules on this page.
             </div>
           ) : loadingRes ? (
             <>
@@ -348,7 +377,9 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
                     className={`step ${i === active ? "active" : ""}`}
                     onClick={() => setActive(i)}
                   >
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div
+                      style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    >
                       <span className="idx">{i + 1}.</span>
                       <span>{m.title || `Material ${i + 1}`}</span>
                     </div>
@@ -376,26 +407,38 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
             <>
               <div className="skel skel-title shimmer" />
               <div className="skel skel-line shimmer" />
-              <div className="skel skel-line shimmer" style={{ width: "85%" }} />
+              <div
+                className="skel skel-line shimmer"
+                style={{ width: "85%" }}
+              />
             </>
           ) : !latest ? (
             <div className="hero">
               <h2>Placement Test</h2>
               <p>
-                The Placement Test measures your English level (CEFR) and unlocks suitable
-                modules. It takes ~30 minutes and is taken once.
+                The Placement Test measures your English level (CEFR) and
+                unlocks suitable modules. It takes ~30 minutes and is taken
+                once.
               </p>
-              <button className="btn" style={{ background: "#fff" }} onClick={startPlacement}>
+              <button
+                className="btn"
+                style={{ background: "#fff" }}
+                onClick={startPlacement}
+              >
                 Test Now
               </button>
             </div>
           ) : resources.length === 0 ? (
-            <div className="subtle">No CEFR-aligned content yet for your level.</div>
+            <div className="subtle">
+              No CEFR-aligned content yet for your level.
+            </div>
           ) : !current ? (
             <div className="subtle">Select a material from the left.</div>
           ) : (
             <div>
-              <h1 className="title">{`${active + 1}. ${current.title || "Material"}`}</h1>
+              <h1 className="title">{`${active + 1}. ${
+                current.title || "Material"
+              }`}</h1>
 
               {/* TEXT */}
               {current.text && (
@@ -434,7 +477,10 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
               {/* FILE */}
               {current.fileUrl && (
                 <section style={{ marginTop: 16 }}>
-                  <FileViewer url={current.fileUrl} title={current.title || "File"} />
+                  <FileViewer
+                    url={current.fileUrl}
+                    title={current.title || "File"}
+                  />
                 </section>
               )}
 
