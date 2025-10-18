@@ -432,7 +432,7 @@ button.menu-item{
   background: radial-gradient(1200px 400px at 80% -20%, rgba(255,255,255,.25), transparent 60%), var(--violet);
   color:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 28px rgba(0,0,0,.15);
 }
-.hero h5{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 24px); font-weight:800; }
+.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 24px); font-weight:800; }
 .hero p{ margin:0 0 10px; opacity:.98; }
 
 /* ====== Weeks grid ====== */
