@@ -522,7 +522,7 @@ button.menu-item{
               </>
             ) : (
               <>
-                <h4>
+                <h3>
                   Your level:&nbsp;
                   <b>
                     {placement.latest.level}
@@ -532,7 +532,7 @@ button.menu-item{
                           .trim()})`
                       : ""}
                   </b>
-                </h4>
+                </h3>
 
                 <p style={{ marginBottom: 12 }}>
                   Score {placement.latest.correct ?? 0}/
