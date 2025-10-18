@@ -10,6 +10,17 @@ import {
   Save,
 } from "lucide-react";
 import { get, post, del } from "@/config/api"; // ← gunakan wrapper API (axios) satu pintu
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+function absolutize(u) {
+  const s = String(u || "");
+  if (!s) return "";
+  // jika sudah absolut, biarkan
+  if (/^https?:\/\//i.test(s)) return s;
+  // jika relatif, tempelkan ke API_BASE
+  const base = API_BASE || "";
+  return base + (s.startsWith("/") ? "" : "/") + s;
+}
 
 /* ================== Little utils ================== */
 const resKey = (levelKey) => `cefr:${levelKey}:resources`;
@@ -41,7 +52,7 @@ const buildEmbedUrl = (url) =>
   !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
 function prepareEmbedSrc(rawUrl) {
-  const url = String(rawUrl || "");
+  const url = absolutize(rawUrl);
   if (!url) return { type: "none", src: "", open: "" };
 
   if (url.includes("docs.google.com/presentation")) {
