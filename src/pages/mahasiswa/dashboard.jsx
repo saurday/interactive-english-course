@@ -587,7 +587,7 @@ button.menu-item{
                 className="btn btn-primary"
                 onClick={() => setJoinOpen(true)}
               >
-                <Plus size={16} /> Join Class
+                Join Class
               </button>
             </div>
           ) : (
