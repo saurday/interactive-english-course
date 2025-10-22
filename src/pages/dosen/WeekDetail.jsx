@@ -142,25 +142,32 @@ function toYouTubeEmbed(raw) {
 const buildEmbedUrl = (url) =>
   !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
-// ----- ABSOLUTIZE: pastikan /storage/... menjadi URL penuh -----
-// Coba ambil BASE API dari env (samakan dengan yang kamu pakai di axios wrapper)
 const API_ORIGIN =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
   (typeof window !== "undefined" && window.__API_BASE__) ||
   "";
 
-/** Ubah path relatif (/storage/...) menjadi URL absolut */
 function absolutize(u) {
   if (!u) return "";
   const s = String(u).trim();
-  if (/^https?:\/\//i.test(s)) return s;          // sudah absolut
+
+  if (/^https?:\/\//i.test(s)) return s;
   if (s.startsWith("//")) return window.location.protocol + s;
+
+  if (/^(materials|public)\//i.test(s)) {
+    const base = (API_ORIGIN || "").replace(/\/+$/, "");
+    return `${base}/storage/${s.replace(/^public\//i, "")}`;
+  }
+
   if (s.startsWith("/")) {
     const base = (API_ORIGIN || "").replace(/\/+$/, "");
     return base ? base + s : (window?.location?.origin || "") + s;
   }
+
+  // fallback
   return s;
 }
+
 
 function prepareEmbedSrc(rawUrl) {
   const raw = String(rawUrl || "").trim();
