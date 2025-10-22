@@ -1568,6 +1568,47 @@ body { background:#fbfbfb; font-family: Inter, Poppins, system-ui, -apple-system
     .file-frame{ width:100%; height: clamp(420px, 70vh, 900px); border:0; border-radius:12px; }
 .modal-overlay { z-index: 2000; }
 
+/* --- Tombol menu komentar (Edit / Delete / Give Score) --- */
+.menu button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f9fafb;
+  color: #1f2937;
+  transition: all 0.15s ease-in-out;
+}
+
+/* Hover efek lembut */
+.menu button:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(67, 56, 202, 0.12);
+}
+
+/* Tombol Delete diberi warna merah agar tegas */
+.menu button:nth-child(2):hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.12);
+}
+
+/* Tombol Give Score diberi warna hijau lembut */
+.menu button:nth-child(3):hover {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+  box-shadow: 0 2px 6px rgba(22, 101, 52, 0.12);
+}
+
 }
 
 `;
