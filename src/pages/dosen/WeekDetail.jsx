@@ -142,108 +142,104 @@ function toYouTubeEmbed(raw) {
 const buildEmbedUrl = (url) =>
   !url ? "" : url.includes("youtu") ? toYouTubeEmbed(url) : url;
 
-// Normalisasi URL & tentukan cara tampilkan
+// ----- ABSOLUTIZE: pastikan /storage/... menjadi URL penuh -----
+// Coba ambil BASE API dari env (samakan dengan yang kamu pakai di axios wrapper)
+const API_ORIGIN =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  (typeof window !== "undefined" && window.__API_BASE__) ||
+  "";
+
+/** Ubah path relatif (/storage/...) menjadi URL absolut */
+function absolutize(u) {
+  if (!u) return "";
+  const s = String(u).trim();
+  if (/^https?:\/\//i.test(s)) return s;          // sudah absolut
+  if (s.startsWith("//")) return window.location.protocol + s;
+  if (s.startsWith("/")) {
+    const base = (API_ORIGIN || "").replace(/\/+$/, "");
+    return base ? base + s : (window?.location?.origin || "") + s;
+  }
+  return s;
+}
+
 function prepareEmbedSrc(rawUrl) {
-  const url = String(rawUrl || "");
-  if (!url) return { type: "none", src: "", open: "" };
+  const raw = String(rawUrl || "").trim();
+  if (!raw) return { type: "none", src: "", open: "" };
+
+  const url = absolutize(raw);               // <— PENTING
+  const clean = url.split("#")[0];
+  const path  = clean.split("?")[0];
+  const ext   = (path.split(".").pop() || "").toLowerCase();
 
   // --- Google Slides ---
   if (url.includes("docs.google.com/presentation")) {
     let src = url;
-
-    // Bila masih /edit atau /present -> ubah ke /embed
     if (/(\/edit|\/present)/.test(src)) {
-      src = src.replace(
-        /\/(edit|present).*$/,
-        "/embed?start=false&loop=false&delayms=3000"
-      );
+      src = src.replace(/\/(edit|present).*$/, "/embed?start=false&loop=false&delayms=3000");
     }
-
-    // Bila /pub? => biarkan, atau konversi ke /embed? (keduanya valid)
     if (/\/pub(\?|$)/.test(src)) {
-      // opsi: gunakan embed supaya konsisten
       src = src.replace(/\/pub(\?|$)/, "/embed?");
       if (!src.includes("?")) src += "start=false&loop=false&delayms=3000";
     }
-
     return { type: "iframe", src, open: url };
   }
 
-  // --- Google Docs ---
+  // --- Google Docs / Sheets / Forms / Drive ---
   if (url.includes("docs.google.com/document")) {
-    // /edit -> /pub?embedded=true (perlu Publish to the web)
-    const src = url.replace(/\/edit.*$/, "/pub?embedded=true");
-    return { type: "iframe", src, open: url };
+    return { type: "iframe", src: url.replace(/\/edit.*$/, "/pub?embedded=true"), open: url };
   }
-
-  // --- Google Sheets ---
   if (url.includes("docs.google.com/spreadsheets")) {
-    // /edit -> /pubhtml?widget=true&headers=false
-    const src = url.replace(/\/edit.*$/, "/pubhtml?widget=true&headers=false");
-    return { type: "iframe", src, open: url };
+    return { type: "iframe", src: url.replace(/\/edit.*$/, "/pubhtml?widget=true&headers=false"), open: url };
   }
-
-  // --- Google Forms ---
   if (url.includes("docs.google.com/forms")) {
-    const src = url.replace(/\/viewform.*$/, "/viewform?embedded=true");
-    return { type: "iframe", src, open: url };
+    return { type: "iframe", src: url.replace(/\/viewform.*$/, "/viewform?embedded=true"), open: url };
   }
-
-  // --- Google Drive file viewer ---
   if (url.includes("drive.google.com")) {
-    // /view -> /preview untuk video/pdf/images; share harus Anyone with link (Viewer)
-    const src = url.replace(/\/view(\?.*)?$/, "/preview");
-    return { type: "iframe", src, open: url };
+    return { type: "iframe", src: url.replace(/\/view(\?.*)?$/, "/preview"), open: url };
   }
 
-  // --- Ekstensi file langsung ---
-  const clean = url.split("#")[0];
-  const path = clean.split("?")[0];
-  const ext = (path.split(".").pop() || "").toLowerCase();
-
-  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext))
+  // --- Ekstensi langsung ---
+  if (["png","jpg","jpeg","gif","webp","bmp","svg"].includes(ext))
     return { type: "image", src: url, open: url };
-  if (["mp4", "webm", "ogg", "m3u8"].includes(ext))
+
+  if (["mp4","webm","ogg","m3u8"].includes(ext))
     return { type: "video", src: url, open: url };
-  if (["mp3", "wav", "oga", "ogg"].includes(ext))
+
+  if (["mp3","wav","oga","ogg"].includes(ext))
     return { type: "audio", src: url, open: url };
-  if (ext === "pdf") return { type: "iframe", src: url, open: url };
-  if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
-    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-      url
-    )}`;
+
+  // PDF → pakai Google Viewer biar aman di banyak server
+  if (ext === "pdf") {
+    const gview = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
+    return { type: "iframe", src: gview, open: url };
+  }
+
+  // Office docs → pakai Office Online viewer
+  if (["doc","docx","ppt","pptx","xls","xlsx"].includes(ext)) {
+    const office = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     return { type: "iframe", src: office, open: url };
   }
 
   // --- Situs umum ---
-  // Banyak situs mengizinkan embed, sebagian menolak (akan muncul refused to connect).
-  // Kita tetap coba tampilkan, dan sediakan tombol "Open original".
+  // Banyak domain menolak di-embed → tetap coba. Jika gagal, user bisa klik "Open original".
   return { type: "iframe", src: url, open: url };
 }
 
+
 function FileViewer({ url, title = "File" }) {
   const { type, src, open } = React.useMemo(() => prepareEmbedSrc(url), [url]);
-
   if (!url) return <div className="muted">No file URL.</div>;
 
-  if (type === "image") {
-    return (
-      <img
-        src={src}
-        alt={title}
-        style={{ maxWidth: "100%", borderRadius: 12 }}
-      />
-    );
-  }
-  if (type === "video") {
-    return (
-      <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />
-    );
-  }
-  if (type === "audio") {
+  if (type === "image")
+    return <img src={src} alt={title} style={{ maxWidth: "100%", borderRadius: 12 }} />;
+
+  if (type === "video")
+    return <video src={src} controls style={{ width: "100%", borderRadius: 12 }} />;
+
+  if (type === "audio")
     return <audio src={src} controls style={{ width: "100%" }} />;
-  }
-  if (type === "iframe") {
+
+  if (type === "iframe")
     return (
       <div>
         <iframe
@@ -251,35 +247,29 @@ function FileViewer({ url, title = "File" }) {
           src={src}
           className="file-frame"
           style={{ width: "100%", height: "70vh", border: 0, borderRadius: 12 }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; web-share"
+          // beberapa penyedia embed minta policy tertentu; ini paling kompatibel
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+          referrerPolicy="no-referrer"
           allowFullScreen
         />
         <div style={{ marginTop: 8 }}>
-          <a
-            href={open || src}
-            target="_blank"
-            rel="noreferrer"
-            className="btn"
-            title="Open original"
-          >
+          <a className="btn" href={open || src} target="_blank" rel="noreferrer">
             Open original
           </a>
         </div>
       </div>
     );
-  }
 
   return (
     <div>
       <div className="muted" style={{ marginBottom: 8 }}>
-        File tidak bisa di-embed. Coba unduh:
+        This site cannot be embedded. Try opening it in a new tab:
       </div>
-      <a className="btn" href={url} rel="noreferrer" target="_blank">
-        Download
-      </a>
+      <a className="btn" href={absolutize(url)} rel="noreferrer" target="_blank">Open original</a>
     </div>
   );
 }
+
 
 /* ================== Data Fetchers ================== */
 
