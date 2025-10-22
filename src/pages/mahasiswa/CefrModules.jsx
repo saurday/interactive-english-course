@@ -293,6 +293,11 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
 .right .hero{ padding:18px; border-radius:16px; }
 .right .hero .btn{ padding:8px 12px; font-size:0.95rem; border-radius:10px; }
 
+.empty-hint{
+  font-size: 13px;        /* ≈ kecil 15% */
+  line-height: 1.55;
+}
+  
 /* titles & text */
 .title{ font-size: clamp(24px, 2vw + 8px, 34px); font-weight:800; margin:0 0 10px; }
 .subtle{ color:#64748b; }
@@ -354,7 +359,7 @@ body { background:#fbfbfb; font-family: Inter, system-ui, -apple-system, Segoe U
               />
             </>
           ) : !latest ? (
-            <div className="subtle" style={{ lineHeight: 1.6 }}>
+            <div className="subtle empty-hint">
               There is no content here yet because you haven’t taken the
               Placement Test. Once you complete the test, your CEFR level will
               unlock the appropriate modules on this page.
