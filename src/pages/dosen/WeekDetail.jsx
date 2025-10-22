@@ -1,4 +1,3 @@
-// src/pages/lecture/WeekDetail.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
