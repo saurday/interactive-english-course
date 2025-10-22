@@ -339,13 +339,15 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
   width: 100%;
   max-width: none;
   margin: 0;
+  font-size: 14px; 
   padding-inline: clamp(14px, 4vw, 28px);
   padding-top: clamp(12px, 2.6vw, 24px);
   padding-bottom: max(clamp(28px, 6vh, 96px), env(safe-area-inset-bottom));
 }
 
-.title { font-size: clamp(18px, 2.2vw + 6px, 20px); font-weight:800; color:#1f2937; margin:0 0 12px; }
-.muted { color:#64748b; }
+.title { font-size: clamp(16px, 1.4vw + 6px, 18px); font-weight:800; color:#1f2937; margin:0 0 12px; }
+.muted { color:#64748b;
+font-size: 13px; }
 
 /* ====== Sidebar ====== */
 .sidebar {
@@ -370,7 +372,7 @@ body { font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, 
   font-weight:600;
   text-decoration:none;
   margin-bottom:6px;
-  font-size:14px;
+  font-size:13px;
   cursor:pointer;
   transition: background .15s ease, color .15s ease;
   user-select:none;
@@ -419,7 +421,7 @@ button.menu-item{
 
 /* ====== Buttons / Inputs ====== */
 .btn{
-  padding:10px 14px; border-radius:10px; border:1px solid #cbd5e1;
+  padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1;
   background:#fff; color:#111827; font-weight:700; cursor:pointer;
 }
 .btn:hover{ background:#f8fafc; }
@@ -432,9 +434,12 @@ button.menu-item{
   background: radial-gradient(1200px 400px at 80% -20%, rgba(255,255,255,.25), transparent 60%), var(--violet);
   color:#fff; border-radius:16px; padding:22px; box-shadow:0 10px 28px rgba(0,0,0,.15);
 }
-.hero h3{ margin:0 0 8px; font-size: clamp(18px, 1.2vw + 10px, 24px); font-weight:800; }
-.hero p{ margin:0 0 10px; opacity:.98; }
-
+.hero h3{ margin:0 0 8px; font-size: clamp(16px, 0.9vw + 9px, 20px); font-weight:800; }
+.hero p{
+  margin:0 0 10px;
+  opacity:.98;
+  font-size: clamp(13px, 0.9vw + 6px, 14.5px);
+}
 /* ====== Weeks grid ====== */
 .grid{
   display: grid;
@@ -445,9 +450,11 @@ button.menu-item{
 @media (max-width: 640px){ .grid{ grid-template-columns: 1fr; } }
 
 .week-card{
-  background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px;
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px; font-size: 14px;
   box-shadow:0 2px 8px rgba(0,0,0,.06); cursor:pointer; transition: transform .15s, box-shadow .15s;
 }
+  .week-card .muted{ font-size: 13px; }          /* konsisten dengan .muted */
+
 .week-card:hover{ transform:translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,.12); }
 .progress-wrap{ height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
 .progress-bar{ height:100%; background:var(--violet); }
